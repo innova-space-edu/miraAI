@@ -24,11 +24,11 @@
     cy="55"
     r="44"
     stroke="url(#rainbow)"
-    stroke-width="6"
+    stroke-width="8"
     fill="none"
     filter="url(#glow)">
     <animate attributeName="r" values="44;49;44" dur="1.4s" repeatCount="indefinite"/>
-    <animate attributeName="stroke-width" values="6;10;6" dur="1.4s" repeatCount="indefinite"/>
+    <animate attributeName="stroke-width" values="8;12;8" dur="1.4s" repeatCount="indefinite"/>
     <animate attributeName="stroke-opacity" values="0.7;1;0.7" dur="1.4s" repeatCount="indefinite"/>
   </circle>
 </svg>
