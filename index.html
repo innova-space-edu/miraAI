@@ -231,7 +231,7 @@
       list.classList.toggle("hidden");
     }
 
-    // --- Activador de voz SOLO en móviles (sutil) ---
+    // --- Activador de voz SOLO en móviles (sutil y mejorado) ---
     function esMovil() {
       return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
@@ -240,10 +240,27 @@
         const btn = document.getElementById('activar-voz-movil');
         btn.style.display = "block";
         btn.onclick = function() {
-          const test = new SpeechSynthesisUtterance("La voz está activada.");
-          window.speechSynthesis.speak(test);
-          btn.style.opacity = 0;
-          setTimeout(() => btn.style.display = 'none', 400);
+          try {
+            const aviso = new SpeechSynthesisUtterance("Voz activada.");
+            aviso.lang = "es-ES";
+            aviso.onend = () => {
+              btn.style.opacity = 0;
+              setTimeout(() => btn.style.display = 'none', 400);
+            };
+            aviso.onerror = () => {
+              btn.style.opacity = 0;
+              setTimeout(() => btn.style.display = 'none', 400);
+            };
+            window.speechSynthesis.speak(aviso);
+            // Por si no dispara eventos, oculta igual en 2 seg.
+            setTimeout(() => {
+              btn.style.opacity = 0;
+              setTimeout(() => btn.style.display = 'none', 400);
+            }, 2000);
+          } catch {
+            btn.style.opacity = 0;
+            setTimeout(() => btn.style.display = 'none', 400);
+          }
         };
       }
     });
