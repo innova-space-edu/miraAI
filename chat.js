@@ -1,12 +1,15 @@
 const API_KEY = "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";
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
-// Halo animado
+// Halo animado solo cuando habla
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
   if (!avatar) return;
-  avatar.classList.toggle("pulse", isTalking);
-  avatar.classList.toggle("still", !isTalking);
+  if (isTalking) {
+    avatar.classList.add("pulse");
+  } else {
+    avatar.classList.remove("pulse");
+  }
 }
 
 // Enter para enviar
@@ -68,7 +71,6 @@ function renderMarkdown(text) {
 
 // PROMPT mejorado: explicación previa, luego fórmula bonita
 const SYSTEM_PROMPT = `
-Tu eres MIRA, Modular Intelligent Responsive Assistant. En español: Asistente Modular, Inteligente y Reactivo. Creada por Innova Space y OpenAi.
 Responde SIEMPRE con estructura ordenada y clara, como ChatGPT.
 
 Si el usuario escribe palabras incompletas, con errores ortográficos, abreviaturas o frases poco claras, intenta corregir o interpretar automáticamente el mensaje para dar la mejor respuesta posible usando el contexto. Si no es completamente claro, ofrece alternativas breves (por ejemplo: "¿Quizás quisiste decir...?" o "¿Te refieres a...?") y pide aclaración solo si ninguna alternativa es adecuada.
