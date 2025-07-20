@@ -144,14 +144,6 @@
             Enviar
           </button>
         </div>
-        <!-- Botón sutil de activación de voz SOLO en móviles -->
-        <div class="flex justify-center mt-3">
-          <button id="activar-voz-movil"
-            style="display:none; background:linear-gradient(90deg,#a855f7,#3b82f6); color:#fff; font-size:1.05em; padding:0.7em 1.5em; border:none; border-radius:9999px; box-shadow:0 2px 12px #6c33a3a0; transition:opacity .2s;"
-            aria-label="Activar voz en este dispositivo">
-            🔊 Activar voz en tu dispositivo
-          </button>
-        </div>
       </div>
       <!-- Botón ¿Quién es MIRA? debajo del chat -->
       <div class="flex justify-center mt-4">
@@ -230,40 +222,6 @@
       const list = document.getElementById("areas-list");
       list.classList.toggle("hidden");
     }
-
-    // --- Activador de voz SOLO en móviles (sutil y mejorado) ---
-    function esMovil() {
-      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    }
-    window.addEventListener('DOMContentLoaded', () => {
-      if (esMovil()) {
-        const btn = document.getElementById('activar-voz-movil');
-        btn.style.display = "block";
-        btn.onclick = function() {
-          try {
-            const aviso = new SpeechSynthesisUtterance("Voz activada.");
-            aviso.lang = "es-ES";
-            aviso.onend = () => {
-              btn.style.opacity = 0;
-              setTimeout(() => btn.style.display = 'none', 400);
-            };
-            aviso.onerror = () => {
-              btn.style.opacity = 0;
-              setTimeout(() => btn.style.display = 'none', 400);
-            };
-            window.speechSynthesis.speak(aviso);
-            // Por si no dispara eventos, oculta igual en 2 seg.
-            setTimeout(() => {
-              btn.style.opacity = 0;
-              setTimeout(() => btn.style.display = 'none', 400);
-            }, 2000);
-          } catch {
-            btn.style.opacity = 0;
-            setTimeout(() => btn.style.display = 'none', 400);
-          }
-        };
-      }
-    });
   </script>
   <script src="chat.js"></script>
 </body>
