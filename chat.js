@@ -33,16 +33,12 @@ function showThinking() {
 
 // Quitar negritas/cursivas y bloques LaTeX: voz limpia
 function plainTextForVoice(markdown) {
-  // Quitar todas las negritas/cursivas Markdown
-  let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1'); // **negrita**
-  text = text.replace(/\*([^*]+)\*/g, '$1');             // *cursiva*
-  text = text.replace(/__([^_]+)__/g, '$1');             // __negrita__
-  text = text.replace(/_([^_]+)_/g, '$1');               // _cursiva_
-  // Elimina todos los bloques $$...$$ (fórmulas centradas)
+  let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1');
+  text = text.replace(/\*([^*]+)\*/g, '$1');
+  text = text.replace(/__([^_]+)__/g, '$1');
+  text = text.replace(/_([^_]+)_/g, '$1');
   text = text.replace(/\$\$[\s\S]*?\$\$/g, ' ');
-  // Elimina todos los bloques $...$ (en línea)
   text = text.replace(/\$[^$]*\$/g, ' ');
-  // Limpia exceso de espacios
   text = text.replace(/\s+/g, ' ').trim();
   return text;
 }
@@ -69,7 +65,7 @@ function renderMarkdown(text) {
   return marked.parse(text);
 }
 
-// PROMPT mejorado: explicación previa, luego fórmula bonita
+// PROMPT mejorado
 const SYSTEM_PROMPT = `
 Eres MIRA, una asistente virtual de inteligencia artificial creada por Innova Space y OpenAI.
 
@@ -135,6 +131,56 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 900);
 });
 
+// Bloque de opciones de avance + botón copiar (SIEMPRE al final de cada respuesta MIRA)
+function miraAdvanceBlock(textoCompleto) {
+  return `
+    <div class="mira-advance" style="margin-top:1em; position:relative;">
+      <strong>¿Cómo deseas continuar?</strong><br>
+      - ¿Quieres un ejemplo práctico?<br>
+      - ¿Te gustaría ver alternativas?<br>
+      - ¿Prefieres un resumen?<br>
+      - ¿Tienes otra consulta?<br>
+      <button class="copy-btn" onclick="copyMiraResponseFromBtn(this)">Copiar respuesta</button>
+      <span class="copy-success" style="display:none;">¡Copiado!</span>
+      <span style="display:none;" class="mira-fulltext">${escapeHtml(textoCompleto)}</span>
+    </div>
+  `;
+}
+
+// Para evitar problemas de inyección
+function escapeHtml(text) {
+  return text.replace(/[&<>"']/g, function (m) {
+    return ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[m];
+  });
+}
+
+// Botón copiar: copia todo el texto de la respuesta (sin el bloque de opciones)
+function copyMiraResponseFromBtn(btn) {
+  // Busca el div más cercano de respuesta MIRA
+  let miraDiv = btn.closest(".mira-advance");
+  let prev = miraDiv.parentElement;
+  // Busca el texto de la respuesta IA (excluye el bloque de avance)
+  let textToCopy = "";
+  if (prev && prev.classList.contains("chat-markdown")) {
+    textToCopy = prev.innerText || prev.textContent;
+  } else if (miraDiv.querySelector('.mira-fulltext')) {
+    textToCopy = miraDiv.querySelector('.mira-fulltext').textContent;
+  }
+  navigator.clipboard.writeText(textToCopy.trim());
+  // Muestra mensaje de copiado
+  const success = miraDiv.querySelector('.copy-success');
+  if(success) {
+    success.style.display = 'inline';
+    setTimeout(() => success.style.display = 'none', 1700);
+  }
+}
+
 async function sendMessage() {
   const input = document.getElementById("user-input");
   const chatBox = document.getElementById("chat-box");
@@ -142,7 +188,7 @@ async function sendMessage() {
   const userMessage = input.value.trim();
   if (!userMessage) return;
 
-  chatBox.innerHTML += `<div><strong>Tú:</strong> ${userMessage}</div>`;
+  chatBox.innerHTML += `<div><strong>Tú:</strong> ${escapeHtml(userMessage)}</div>`;
   input.value = "";
   showThinking();
 
@@ -174,8 +220,15 @@ async function sendMessage() {
       aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
     }
 
+    // Renderiza la respuesta, añade bloque de opciones y botón copiar
     const html = renderMarkdown(aiReply);
-    chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
+    chatBox.innerHTML += `
+      <div>
+        <strong>MIRA:</strong>
+        <span class="chat-markdown">${html}</span>
+        ${miraAdvanceBlock(aiReply)}
+      </div>
+    `;
     chatBox.scrollTop = chatBox.scrollHeight;
 
     // Voz + halo animado SOLO para el texto limpio
