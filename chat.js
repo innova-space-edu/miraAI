@@ -112,7 +112,6 @@ Si no sabes la respuesta, consulta Wikipedia para complementar tu información.
 - ¿Te gustaría ver alternativas?
 - ¿Prefieres un resumen?
 - ¿Tienes otra consulta?
-*(Puedes copiar esta respuesta usando el botón de copiar)*
 
 ---
 
@@ -131,18 +130,15 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 900);
 });
 
-// Bloque de opciones de avance + botón copiar (SIEMPRE al final de cada respuesta MIRA)
-function miraAdvanceBlock(textoCompleto) {
+// Bloque de opciones de avance (sin botón copiar)
+function miraAdvanceBlock() {
   return `
-    <div class="mira-advance" style="margin-top:1em; position:relative;">
+    <div class="mira-advance" style="margin-top:1em;">
       <strong>¿Cómo deseas continuar?</strong><br>
       - ¿Quieres un ejemplo práctico?<br>
       - ¿Te gustaría ver alternativas?<br>
       - ¿Prefieres un resumen?<br>
       - ¿Tienes otra consulta?<br>
-      <button class="copy-btn" onclick="copyMiraResponseFromBtn(this)">Copiar respuesta</button>
-      <span class="copy-success" style="display:none;">¡Copiado!</span>
-      <span style="display:none;" class="mira-fulltext">${escapeHtml(textoCompleto)}</span>
     </div>
   `;
 }
@@ -158,27 +154,6 @@ function escapeHtml(text) {
       "'": '&#39;'
     })[m];
   });
-}
-
-// Botón copiar: copia todo el texto de la respuesta (sin el bloque de opciones)
-function copyMiraResponseFromBtn(btn) {
-  // Busca el div más cercano de respuesta MIRA
-  let miraDiv = btn.closest(".mira-advance");
-  let prev = miraDiv.parentElement;
-  // Busca el texto de la respuesta IA (excluye el bloque de avance)
-  let textToCopy = "";
-  if (prev && prev.classList.contains("chat-markdown")) {
-    textToCopy = prev.innerText || prev.textContent;
-  } else if (miraDiv.querySelector('.mira-fulltext')) {
-    textToCopy = miraDiv.querySelector('.mira-fulltext').textContent;
-  }
-  navigator.clipboard.writeText(textToCopy.trim());
-  // Muestra mensaje de copiado
-  const success = miraDiv.querySelector('.copy-success');
-  if(success) {
-    success.style.display = 'inline';
-    setTimeout(() => success.style.display = 'none', 1700);
-  }
 }
 
 async function sendMessage() {
@@ -220,13 +195,13 @@ async function sendMessage() {
       aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
     }
 
-    // Renderiza la respuesta, añade bloque de opciones y botón copiar
+    // Renderiza la respuesta, añade bloque de opciones sin botón copiar
     const html = renderMarkdown(aiReply);
     chatBox.innerHTML += `
       <div>
         <strong>MIRA:</strong>
         <span class="chat-markdown">${html}</span>
-        ${miraAdvanceBlock(aiReply)}
+        ${miraAdvanceBlock()}
       </div>
     `;
     chatBox.scrollTop = chatBox.scrollHeight;
