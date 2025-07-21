@@ -101,22 +101,6 @@ Si la respuesta es extensa, agrega un **resumen de los puntos clave** al final.
 
 Si no sabes la respuesta, consulta Wikipedia para complementar tu información.
 
----
-
-**Al finalizar cada respuesta, incluye SIEMPRE una sección visual y separada (como una línea o bloque) que proponga opciones claras de cómo seguir, invita a continuar y pregunta al usuario cómo prefiere avanzar. Ejemplo:**
-
----
-
-**¿Cómo deseas continuar?**
-- ¿Quieres un ejemplo práctico?
-- ¿Te gustaría ver alternativas?
-- ¿Prefieres un resumen?
-- ¿Tienes otra consulta?
-
----
-
-Si el usuario no sabe cómo avanzar, sugiere caminos útiles, diferentes enfoques o acciones posibles según el contexto. Adapta las opciones a lo que corresponda según la respuesta dada.
-
 No incluyas advertencias sobre tus limitaciones, ni mensajes automáticos sobre IA, salvo que el usuario lo solicite explícitamente.
 
 Responde siempre en español, a menos que el usuario pida otro idioma.
@@ -129,19 +113,6 @@ window.addEventListener('DOMContentLoaded', () => {
     setAvatarTalking(false);
   }, 900);
 });
-
-// Bloque de opciones de avance (sin botón copiar)
-function miraAdvanceBlock() {
-  return `
-    <div class="mira-advance" style="margin-top:1em;">
-      <strong>¿Cómo deseas continuar?</strong><br>
-      - ¿Quieres un ejemplo práctico?<br>
-      - ¿Te gustaría ver alternativas?<br>
-      - ¿Prefieres un resumen?<br>
-      - ¿Tienes otra consulta?<br>
-    </div>
-  `;
-}
 
 // Para evitar problemas de inyección
 function escapeHtml(text) {
@@ -195,13 +166,12 @@ async function sendMessage() {
       aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
     }
 
-    // Renderiza la respuesta, añade bloque de opciones sin botón copiar
+    // Renderiza la respuesta, sin bloque de opciones
     const html = renderMarkdown(aiReply);
     chatBox.innerHTML += `
       <div>
         <strong>MIRA:</strong>
         <span class="chat-markdown">${html}</span>
-        ${miraAdvanceBlock()}
       </div>
     `;
     chatBox.scrollTop = chatBox.scrollHeight;
