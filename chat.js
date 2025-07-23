@@ -31,16 +31,22 @@ function showThinking() {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Quitar negritas/cursivas y bloques LaTeX: voz limpia
+// Solo lee líneas normales, no fórmulas ni LaTeX
 function plainTextForVoice(markdown) {
-  let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1');
-  text = text.replace(/\*([^*]+)\*/g, '$1');
-  text = text.replace(/__([^_]+)__/g, '$1');
-  text = text.replace(/_([^_]+)_/g, '$1');
-  text = text.replace(/\$\$[\s\S]*?\$\$/g, ' ');
-  text = text.replace(/\$[^$]*\$/g, ' ');
-  text = text.replace(/\s+/g, ' ').trim();
-  return text;
+  return markdown
+    .split('\n')
+    .filter(line =>
+      !line.trim().startsWith('$$') && !line.trim().endsWith('$$') && // No líneas de fórmulas centradas
+      !line.includes('$') && // No fórmulas inline
+      !/^ {0,3}`/.test(line) // No bloques de código por si acaso
+    )
+    .join(' ')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Quita negritas Markdown
+    .replace(/\*([^*]+)\*/g, '$1')      // Quita cursivas Markdown
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // Voz y halo solo en texto limpio
@@ -65,7 +71,7 @@ function renderMarkdown(text) {
   return marked.parse(text);
 }
 
-// PROMPT mejorado para corrección y autopresentación
+// Prompt reducido para máximo contexto y libertad del modelo
 const SYSTEM_PROMPT = `
 Eres MIRA, una asistente virtual educativa creada por Innova Space y OpenAI.
 
@@ -129,7 +135,7 @@ async function sendMessage() {
   try {
     let aiReply = await askAI(userMessage);
 
-    // Si la respuesta es vacía, intenta una vez más
+    // Si la respuesta es vacía o genérica, busca en Wikipedia
     if (
       !aiReply ||
       aiReply.toLowerCase().includes("no se pudo") ||
@@ -140,34 +146,15 @@ async function sendMessage() {
         /kien eres|quien eres|kien es mira|quien es mira|k eres|q eres|qué eres|ke eres|q puedes aser|qué puedes hacer|q asés|qué haces|qué asés|ke funcion tienes|qué funcion tienes|de donde vienes|de donde bvienes|presentate|preséntate|que puedes hacer|quien eres tu|quien sos|quien sos vos|quien soy|quien estoy|quien/.test(userMessage.toLowerCase())
       ) {
         aiReply = "Soy MIRA, una asistente virtual creada por Innova Space y OpenAI. Estoy diseñada para ayudarte a aprender y resolver tus dudas de manera clara, amigable y personalizada, en todas las materias escolares. Puedes preguntarme sobre matemáticas, ciencias, historia, tecnología y mucho más.";
-      } else if (/formula|fórmula|velocidad media|media velocidad/.test(userMessage.toLowerCase())) {
-        // Sugerir ejemplo explícito para fórmulas
-        aiReply = `La velocidad media es igual al desplazamiento dividido por el intervalo de tiempo.
-$$
-v_m = \\frac{\\Delta x}{\\Delta t}
-$$
-Donde:
-- **v_m** es la velocidad media.
-- **Δx** es el desplazamiento total.
-- **Δt** es el intervalo de tiempo.`;
       } else {
-        // Intenta una vez más al modelo (a veces la segunda vez funciona)
-        aiReply = await askAI(userMessage);
-
-        // Si aún no hay respuesta, busca en Wikipedia
-        if (
-          !aiReply ||
-          aiReply.toLowerCase().includes("no se pudo") ||
-          aiReply.toLowerCase().includes("no encontré una respuesta")
-        ) {
-          const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
-          const wikiData = await wiki.json();
-          aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
-        }
+        // Busca en Wikipedia
+        const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
+        const wikiData = await wiki.json();
+        aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
       }
     }
 
-    // Renderiza la respuesta
+    // Renderiza la respuesta en pantalla
     const html = renderMarkdown(aiReply);
     chatBox.innerHTML += `
       <div>
@@ -177,7 +164,7 @@ Donde:
     `;
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    // Voz + halo animado SOLO para el texto limpio
+    // Solo lee explicación, no fórmulas
     speak(aiReply);
 
     // Re-renderizar MathJax para fórmulas
