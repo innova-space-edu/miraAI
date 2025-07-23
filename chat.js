@@ -1,207 +1,232 @@
-const API_KEY = "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";
-const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
-
-// Prompt actualizado: explicación previa, sin LaTeX en "Donde:", sigue el hilo
-const SYSTEM_PROMPT = `
-Eres MIRA, una asistente virtual educativa creada por Innova Space y OpenAI.
-
-Responde siempre de forma clara, natural y ordenada, como ChatGPT. Utiliza títulos, listas, tablas y explicaciones sencillas.
-
-Cuando te pidan una fórmula, ecuación o función:
-- Explica primero con una frase sencilla y clara lo que representa esa fórmula.
-- Después, muestra la fórmula escrita en LaTeX para que se vea ordenada y bonita.
-
-Al explicar el significado de cada variable, escribe el nombre y su significado en texto simple, así el usuario lo puede leer y escuchar fácilmente (ejemplo: v_m es la velocidad media).
-
-Haz las explicaciones lo más comprensibles y didácticas posible, como para estudiantes de secundaria.  
-Corrige errores ortográficos automáticamente. Si la pregunta es ambigua, interpreta o pide aclaración.  
-Mantén el hilo de la conversación y responde a preguntas de seguimiento (“otro ejemplo”, “explícalo de nuevo”, etc.) teniendo en cuenta el contexto anterior.
-
-Responde siempre en español, a menos que el usuario indique otro idioma.
-`;
-
-// Halo animado solo cuando habla
-function setAvatarTalking(isTalking) {
-  const avatar = document.getElementById("avatar-mira");
-  if (!avatar) return;
-  if (isTalking) {
-    avatar.classList.add("pulse");
-  } else {
-    avatar.classList.remove("pulse");
-  }
-}
-
-// Enter para enviar
-document.getElementById("user-input").addEventListener("keydown", function(event) {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    sendMessage();
-  }
-});
-
-// Indicador de carga
-function showThinking() {
-  const chatBox = document.getElementById("chat-box");
-  const thinking = document.createElement("div");
-  thinking.id = "thinking";
-  thinking.className = "text-purple-300 italic";
-  thinking.innerHTML = `<span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>`;
-  chatBox.appendChild(thinking);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-// Solo lee líneas normales, no fórmulas ni LaTeX, y agrega pausas naturales
-function plainTextForVoice(markdown) {
-  let text = markdown
-    .split('\n')
-    .filter(line =>
-      !line.trim().startsWith('$$') && !line.trim().endsWith('$$') && // No fórmulas centradas
-      !line.includes('$') && // No fórmulas inline
-      !/^ {0,3}`/.test(line) // No bloques de código
-    )
-    .join('. ') // Une cada línea con punto y espacio para mejorar pausas
-    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Quita negritas
-    .replace(/\*([^*]+)\*/g, '$1')      // Quita cursivas
-    .replace(/__([^_]+)__/g, '$1')
-    .replace(/_([^_]+)_/g, '$1')
-    .replace(/([.,;:!?\)])([^\s.])/g, '$1 $2') // Asegura espacio después de puntuación
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  // Elimina puntos dobles (por unir dos líneas con punto)
-  text = text.replace(/\.{2,}/g, '.');
-  // Elimina punto final extra si está repetido
-  text = text.replace(/\. \./g, '. ');
-
-  return text;
-}
-
-// Voz y halo solo en texto limpio
-function speak(text) {
-  try {
-    const plain = plainTextForVoice(text);
-    if (!plain) return;
-    const msg = new SpeechSynthesisUtterance(plain);
-    msg.lang = "es-ES";
-    window.speechSynthesis.cancel();
-    setAvatarTalking(true);
-    msg.onend = () => setAvatarTalking(false);
-    msg.onerror = () => setAvatarTalking(false);
-    window.speechSynthesis.speak(msg);
-  } catch {
-    setAvatarTalking(false);
-  }
-}
-
-// Render Markdown y MathJax
-function renderMarkdown(text) {
-  return marked.parse(text);
-}
-
-// Para evitar problemas de inyección
-function escapeHtml(text) {
-  return text.replace(/[&<>"']/g, function (m) {
-    return ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
-    })[m];
-  });
-}
-
-// Memoria de conversación (hilo)
-const chatHistory = [
-  { role: "system", content: SYSTEM_PROMPT }
-];
-
-// Saludo hablado inicial (al cargar la página)
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
-    setAvatarTalking(false);
-  }, 900);
-});
-
-async function sendMessage() {
-  const input = document.getElementById("user-input");
-  const chatBox = document.getElementById("chat-box");
-  const userMessage = input.value.trim();
-  if (!userMessage) return;
-
-  chatBox.innerHTML += `<div><strong>Tú:</strong> ${escapeHtml(userMessage)}</div>`;
-  input.value = "";
-  showThinking();
-
-  // Agrega mensaje de usuario al historial
-  chatHistory.push({ role: "user", content: userMessage });
-
-  // Mantén solo los últimos 8 mensajes (puedes ajustar)
-  if (chatHistory.length > 9) {
-    chatHistory.splice(1, chatHistory.length - 8); // deja system y los últimos 8
-  }
-
-  try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: chatHistory,
-        temperature: 0.7
-      })
-    });
-
-    const data = await response.json();
-    let aiReply = data.choices?.[0]?.message?.content || "";
-
-    // Si la respuesta es vacía o genérica, busca en Wikipedia
-    if (
-      !aiReply ||
-      aiReply.toLowerCase().includes("no se pudo") ||
-      aiReply.toLowerCase().includes("no encontré una respuesta")
-    ) {
-      // Preguntas típicas de presentación, incluso con faltas
-      if (
-        /kien eres|quien eres|kien es mira|quien es mira|k eres|q eres|qué eres|ke eres|q puedes aser|qué puedes hacer|q asés|qué haces|qué asés|ke funcion tienes|qué funcion tienes|de donde vienes|de donde bvienes|presentate|preséntate|que puedes hacer|quien eres tu|quien sos|quien sos vos|quien soy|quien estoy|quien/.test(userMessage.toLowerCase())
-      ) {
-        aiReply = "Soy MIRA, una asistente virtual creada por Innova Space y OpenAI. Estoy diseñada para ayudarte a aprender y resolver tus dudas de manera clara, amigable y personalizada, en todas las materias escolares. Puedes preguntarme sobre matemáticas, ciencias, historia, tecnología y mucho más.";
-      } else {
-        // Busca en Wikipedia
-        const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
-        const wikiData = await wiki.json();
-        aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
-      }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Innova Space Education</title>
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-P64ZZSCZ7Z"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-P64ZZSCZ7Z');
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    #avatar-mira {
+      display: inline-block;
+      vertical-align: middle;
+      width: 60px;
+      height: 60px;
+      margin-left: 15px;
+      margin-bottom: 8px;
+      transition: filter 0.3s, opacity 0.3s;
+      opacity: 1;
+      filter: grayscale(0.4) brightness(0.8);
     }
+    #avatar-mira.pulse {
+      animation: halo-glow 1.2s infinite alternate;
+      filter: drop-shadow(0 0 16px #a855f7) brightness(1.25);
+      opacity: 1;
+    }
+    @keyframes halo-glow {
+      from { filter: drop-shadow(0 0 12px #4f46e5) brightness(1.18); }
+      to   { filter: drop-shadow(0 0 36px #38bdf8) brightness(1.45); }
+    }
+    @media (max-width: 600px) {
+      #avatar-mira { width: 40px; height: 40px; margin-left: 5px; }
+      #chat-box { font-size: 0.96rem;}
+      .max-w-3xl { max-width: 98vw;}
+    }
+    .chat-markdown table {
+      border-collapse: collapse; margin: 0.5em 0;
+      width: 100%;
+      background: #22223b;
+      color: #fafafa;
+      font-size: 0.97rem;
+    }
+    .chat-markdown th, .chat-markdown td {
+      border: 1px solid #7f5af0;
+      padding: 6px 10px;
+      text-align: left;
+    }
+    .chat-markdown th { background: #4f378b; }
+    mjx-container[jax="CHTML"] {
+      font-size: 1.25em;
+      background: transparent !important;
+      padding: 0.12em 0.2em;
+      margin: 0.35em 0;
+    }
+    .credits {
+      font-size: 1.1em;
+      color: #bbcbff;
+      text-align: center;
+      padding-bottom: 2em;
+      opacity: 0.85;
+      letter-spacing: 0.03em;
+    }
+    .credits strong {
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    #mira-info {
+      z-index: 50;
+      box-shadow: 0 6px 32px #23104a;
+      border-radius: 1.2rem;
+      background: #232146;
+      border: 2px solid #a855f7;
+      color: #fff;
+      max-width: 420px;
+      width: 92vw;
+      padding: 2.1rem 1.3rem 1.3rem 1.3rem;
+      text-align: center;
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%,-50%);
+      display: none;
+      transition: opacity .2s;
+    }
+    #mira-info h3 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    #mira-info button {
+      margin-top: 1.5rem;
+      background: #a855f7;
+      color: #fff;
+      padding: 0.5rem 1.3rem;
+      border-radius: 0.6rem;
+      font-weight: 500;
+    }
+    /* Ya NO existe .mira-advance */
+  </style>
+</head>
+<body class="bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white font-sans scroll-smooth">
 
-    // Agrega respuesta al historial para mantener el hilo
-    chatHistory.push({ role: "assistant", content: aiReply });
+  <!-- Título -->
+  <section class="pt-10 text-center">
+    <h1 class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 text-transparent bg-clip-text">
+      Innova Space Education
+    </h1>
+    <p class="text-lg text-gray-300 mt-3">Educación del futuro. Conectando estudiantes con IA.</p>
+  </section>
 
-    document.getElementById("thinking")?.remove();
-    const html = renderMarkdown(aiReply);
-    chatBox.innerHTML += `
-      <div>
-        <strong>MIRA:</strong>
-        <span class="chat-markdown">${html}</span>
+  <!-- Asistente IA y Avatar -->
+  <section class="pt-12 pb-10 px-4 relative">
+    <div class="max-w-3xl mx-auto relative mt-4">
+      <div class="flex items-center justify-center mb-8">
+        <h2 class="text-4xl font-bold text-center mb-0">Asistente IA - MIRA</h2>
+        <object id="avatar-mira"
+          type="image/svg+xml"
+          data="avatar_mira.svg"
+          class="still"
+          tabindex="-1"
+          aria-hidden="true"></object>
       </div>
-    `;
-    chatBox.scrollTop = chatBox.scrollHeight;
+      <div class="bg-gray-900 border border-purple-500 rounded-xl p-4 shadow-xl relative">
+        <div id="chat-box" class="h-72 md:h-64 overflow-y-auto bg-gray-800 p-3 rounded-md mb-4 text-sm space-y-2 text-white chat-markdown" aria-live="polite">
+          <div>
+            <strong>MIRA:</strong> ¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <input
+            aria-label="Escribe tu mensaje"
+            type="text" id="user-input"
+            placeholder="Escribe tu mensaje..."
+            class="flex-1 p-2 rounded-md bg-gray-700 text-white border border-gray-600"
+            autocomplete="off"
+            onkeydown="if(event.key==='Enter'){sendMessage();return false;}"
+          >
+          <button onclick="sendMessage()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-md text-white font-bold" tabindex="0">
+            Enviar
+          </button>
+        </div>
+      </div>
+      <!-- Botón ¿Quién es MIRA? debajo del chat -->
+      <div class="flex justify-center mt-4">
+        <button onclick="toggleMiraInfo()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-lg">
+          ¿Quién es MIRA?
+        </button>
+      </div>
+      <!-- Ventana flotante de descripción de MIRA -->
+      <div id="mira-info">
+        <h3>¿Quién es MIRA?</h3>
+        <p class="text-base mb-4">
+          <strong>MIRA</strong> (Modular Intelligent Responsive Assistant), en español: Asistente Modular, Inteligente y Reactivo.<br>
+          Creada por <strong>Innova Space</strong> con tecnología <strong>OpenAI</strong>.<br>
+          Diseñada para acompañar, explicar y ayudar a estudiantes y docentes de forma interactiva y personalizada en todas las materias.<br>
+          Su misión es facilitar el aprendizaje, responder dudas, explicar fórmulas y conceptos, y guiarte en tu avance académico, con explicaciones claras y amigables.
+        </p>
+        <button onclick="toggleMiraInfo()">Cerrar</button>
+      </div>
+    </div>
+  </section>
 
-    speak(aiReply);
+  <!-- Áreas (un solo botón desplegable) -->
+  <section class="py-14 px-6 bg-indigo-800 bg-opacity-20 text-center">
+    <h2 class="text-4xl font-bold mb-7">Áreas que responde MIRA</h2>
+    <button onclick="toggleAreas()" class="bg-purple-700 px-5 py-3 rounded-lg font-semibold mb-4 text-white shadow-lg">
+      Ver áreas que responde MIRA
+    </button>
+    <div id="areas-list" class="hidden mt-3">
+      <ul class="max-w-lg mx-auto text-left space-y-1">
+        <li>📐 Matemáticas</li>
+        <li>🧲 Física</li>
+        <li>⚗️ Química</li>
+        <li>🧬 Biología</li>
+        <li>🌎 Historia</li>
+        <li>🗺️ Geografía</li>
+        <li>📚 Lenguaje</li>
+        <li>🗣️ Inglés</li>
+        <li>🎨 Artes Visuales</li>
+        <li>🎼 Música</li>
+        <li>🏃 Educación Física</li>
+        <li>💭 Filosofía</li>
+        <li>💻 Tecnología</li>
+        <li>🤝 Orientación</li>
+      </ul>
+    </div>
+  </section>
 
-    if (window.MathJax) MathJax.typesetPromise();
+  <!-- Quiénes somos -->
+  <section class="py-14 px-6 bg-indigo-900 bg-opacity-30">
+    <h2 class="text-4xl font-bold text-center mb-6">¿Quiénes somos?</h2>
+    <p class="text-center text-lg max-w-3xl mx-auto text-gray-300">
+      Plataforma educativa que integra inteligencia artificial para apoyar el aprendizaje de los estudiantes.
+    </p>
+  </section>
 
-  } catch (error) {
-    document.getElementById("thinking")?.remove();
-    chatBox.innerHTML += `<div><strong>MIRA:</strong> Error al conectar con la IA.</div>`;
-    setAvatarTalking(false);
-    console.error(error);
-  }
-}
+  <!-- Contacto -->
+  <section class="py-10 px-6 bg-indigo-700 bg-opacity-40">
+    <h2 class="text-4xl font-bold text-center mb-6">Contáctanos</h2>
+    <p class="text-center text-lg text-gray-200">Correo: contacto@innovaspace.cl</p>
+  </section>
 
-// Halo arranca quieto
-setAvatarTalking(false);
+  <!-- Logo y créditos al final -->
+  <div class="flex flex-col justify-center items-center py-10 gap-3">
+    <img src="logo.png" alt="Logo Innova Space" style="max-width:170px; width: 40vw; height:auto; opacity:0.95;">
+    <div class="credits">
+      Creado por <strong>Innova Space</strong> y <strong>OpenAI</strong>.
+    </div>
+  </div>
+
+  <script>
+    function toggleMiraInfo() {
+      const info = document.getElementById("mira-info");
+      info.style.display = (info.style.display === "none" || info.style.display === "") ? "block" : "none";
+    }
+    function toggleAreas() {
+      const list = document.getElementById("areas-list");
+      list.classList.toggle("hidden");
+    }
+  </script>
+  <script src="chat.js"></script>
+</body>
+</html>
