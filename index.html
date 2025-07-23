@@ -1,10 +1,10 @@
-<!-- index.html actualizado con memoria conversacional -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Innova Space Education</title>
+  <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-P64ZZSCZ7Z"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -16,80 +16,215 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
   <style>
-    /* (Estilos iguales al original omitidos por brevedad) */
+    #avatar-mira {
+      display: inline-block;
+      vertical-align: middle;
+      width: 60px;
+      height: 60px;
+      margin-left: 15px;
+      margin-bottom: 8px;
+      transition: filter 0.3s, opacity 0.3s;
+      opacity: 1;
+      filter: grayscale(0.4) brightness(0.8);
+    }
+    #avatar-mira.pulse {
+      animation: halo-glow 1.2s infinite alternate;
+      filter: drop-shadow(0 0 16px #a855f7) brightness(1.25);
+      opacity: 1;
+    }
+    @keyframes halo-glow {
+      from { filter: drop-shadow(0 0 12px #4f46e5) brightness(1.18); }
+      to   { filter: drop-shadow(0 0 36px #38bdf8) brightness(1.45); }
+    }
+    @media (max-width: 600px) {
+      #avatar-mira { width: 40px; height: 40px; margin-left: 5px; }
+      #chat-box { font-size: 0.96rem;}
+      .max-w-3xl { max-width: 98vw;}
+    }
+    .chat-markdown table {
+      border-collapse: collapse; margin: 0.5em 0;
+      width: 100%;
+      background: #22223b;
+      color: #fafafa;
+      font-size: 0.97rem;
+    }
+    .chat-markdown th, .chat-markdown td {
+      border: 1px solid #7f5af0;
+      padding: 6px 10px;
+      text-align: left;
+    }
+    .chat-markdown th { background: #4f378b; }
+    mjx-container[jax="CHTML"] {
+      font-size: 1.25em;
+      background: transparent !important;
+      padding: 0.12em 0.2em;
+      margin: 0.35em 0;
+    }
+    .credits {
+      font-size: 1.1em;
+      color: #bbcbff;
+      text-align: center;
+      padding-bottom: 2em;
+      opacity: 0.85;
+      letter-spacing: 0.03em;
+    }
+    .credits strong {
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    #mira-info {
+      z-index: 50;
+      box-shadow: 0 6px 32px #23104a;
+      border-radius: 1.2rem;
+      background: #232146;
+      border: 2px solid #a855f7;
+      color: #fff;
+      max-width: 420px;
+      width: 92vw;
+      padding: 2.1rem 1.3rem 1.3rem 1.3rem;
+      text-align: center;
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%,-50%);
+      display: none;
+      transition: opacity .2s;
+    }
+    #mira-info h3 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    #mira-info button {
+      margin-top: 1.5rem;
+      background: #a855f7;
+      color: #fff;
+      padding: 0.5rem 1.3rem;
+      border-radius: 0.6rem;
+      font-weight: 500;
+    }
+    /* Ya NO existe .mira-advance */
   </style>
 </head>
 <body class="bg-gradient-to-br from-black via-indigo-900 to-purple-900 text-white font-sans scroll-smooth">
-  <!-- (Contenido visual igual al original) -->
+
+  <!-- Título -->
+  <section class="pt-10 text-center">
+    <h1 class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 text-transparent bg-clip-text">
+      Innova Space Education
+    </h1>
+    <p class="text-lg text-gray-300 mt-3">Educación del futuro. Conectando estudiantes con IA.</p>
+  </section>
+
+  <!-- Asistente IA y Avatar -->
+  <section class="pt-12 pb-10 px-4 relative">
+    <div class="max-w-3xl mx-auto relative mt-4">
+      <div class="flex items-center justify-center mb-8">
+        <h2 class="text-4xl font-bold text-center mb-0">Asistente IA - MIRA</h2>
+        <object id="avatar-mira"
+          type="image/svg+xml"
+          data="avatar_mira.svg"
+          class="still"
+          tabindex="-1"
+          aria-hidden="true"></object>
+      </div>
+      <div class="bg-gray-900 border border-purple-500 rounded-xl p-4 shadow-xl relative">
+        <div id="chat-box" class="h-72 md:h-64 overflow-y-auto bg-gray-800 p-3 rounded-md mb-4 text-sm space-y-2 text-white chat-markdown" aria-live="polite">
+          <div>
+            <strong>MIRA:</strong> ¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <input
+            aria-label="Escribe tu mensaje"
+            type="text" id="user-input"
+            placeholder="Escribe tu mensaje..."
+            class="flex-1 p-2 rounded-md bg-gray-700 text-white border border-gray-600"
+            autocomplete="off"
+            onkeydown="if(event.key==='Enter'){sendMessage();return false;}"
+          >
+          <button onclick="sendMessage()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-md text-white font-bold" tabindex="0">
+            Enviar
+          </button>
+        </div>
+      </div>
+      <!-- Botón ¿Quién es MIRA? debajo del chat -->
+      <div class="flex justify-center mt-4">
+        <button onclick="toggleMiraInfo()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-lg">
+          ¿Quién es MIRA?
+        </button>
+      </div>
+      <!-- Ventana flotante de descripción de MIRA -->
+      <div id="mira-info">
+        <h3>¿Quién es MIRA?</h3>
+        <p class="text-base mb-4">
+          <strong>MIRA</strong> (Modular Intelligent Responsive Assistant), en español: Asistente Modular, Inteligente y Reactivo.<br>
+          Creada por <strong>Innova Space</strong> con tecnología <strong>OpenAI</strong>.<br>
+          Diseñada para acompañar, explicar y ayudar a estudiantes y docentes de forma interactiva y personalizada en todas las materias.<br>
+          Su misión es facilitar el aprendizaje, responder dudas, explicar fórmulas y conceptos, y guiarte en tu avance académico, con explicaciones claras y amigables.
+        </p>
+        <button onclick="toggleMiraInfo()">Cerrar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Áreas (un solo botón desplegable) -->
+  <section class="py-14 px-6 bg-indigo-800 bg-opacity-20 text-center">
+    <h2 class="text-4xl font-bold mb-7">Áreas que responde MIRA</h2>
+    <button onclick="toggleAreas()" class="bg-purple-700 px-5 py-3 rounded-lg font-semibold mb-4 text-white shadow-lg">
+      Ver áreas que responde MIRA
+    </button>
+    <div id="areas-list" class="hidden mt-3">
+      <ul class="max-w-lg mx-auto text-left space-y-1">
+        <li>📐 Matemáticas</li>
+        <li>🧲 Física</li>
+        <li>⚗️ Química</li>
+        <li>🧬 Biología</li>
+        <li>🌎 Historia</li>
+        <li>🗺️ Geografía</li>
+        <li>📚 Lenguaje</li>
+        <li>🗣️ Inglés</li>
+        <li>🎨 Artes Visuales</li>
+        <li>🎼 Música</li>
+        <li>🏃 Educación Física</li>
+        <li>💭 Filosofía</li>
+        <li>💻 Tecnología</li>
+        <li>🤝 Orientación</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Quiénes somos -->
+  <section class="py-14 px-6 bg-indigo-900 bg-opacity-30">
+    <h2 class="text-4xl font-bold text-center mb-6">¿Quiénes somos?</h2>
+    <p class="text-center text-lg max-w-3xl mx-auto text-gray-300">
+      Plataforma educativa que integra inteligencia artificial para apoyar el aprendizaje de los estudiantes.
+    </p>
+  </section>
+
+  <!-- Contacto -->
+  <section class="py-10 px-6 bg-indigo-700 bg-opacity-40">
+    <h2 class="text-4xl font-bold text-center mb-6">Contáctanos</h2>
+    <p class="text-center text-lg text-gray-200">Correo: contacto@innovaspace.cl</p>
+  </section>
+
+  <!-- Logo y créditos al final -->
+  <div class="flex flex-col justify-center items-center py-10 gap-3">
+    <img src="logo.png" alt="Logo Innova Space" style="max-width:170px; width: 40vw; height:auto; opacity:0.95;">
+    <div class="credits">
+      Creado por <strong>Innova Space</strong> y <strong>OpenAI</strong>.
+    </div>
+  </div>
 
   <script>
-    // Mecanismo de memoria contextual
-    let historial = [];
-    let temaActual = null;
-    let tiempoUltimaInteraccion = Date.now();
-    const LIMITE_TIEMPO = 10 * 60 * 1000;
-
-    function detectarTema(mensaje) {
-      const temas = {
-        "riesgo": "riesgos naturales",
-        "clima": "clima y medioambiente",
-        "salud": "salud y bienestar",
-        "inteligencia": "inteligencia artificial",
-        "robot": "tecnología y robótica",
-        "internet": "tecnología e información",
-        "planificación": "planificaciones escolares",
-        "profesor": "educación",
-        "satélite": "tecnología espacial"
-      };
-      mensaje = mensaje.toLowerCase();
-      return Object.keys(temas).find(p => mensaje.includes(p)) ? temas[Object.keys(temas).find(p => mensaje.includes(p))] : null;
+    function toggleMiraInfo() {
+      const info = document.getElementById("mira-info");
+      info.style.display = (info.style.display === "none" || info.style.display === "") ? "block" : "none";
     }
-
-    function actualizarTema(mensaje) {
-      const nuevoTema = detectarTema(mensaje);
-      const ahora = Date.now();
-      if (nuevoTema) {
-        temaActual = nuevoTema;
-        tiempoUltimaInteraccion = ahora;
-      } else if (ahora - tiempoUltimaInteraccion > LIMITE_TIEMPO) {
-        temaActual = null;
-        historial = [];
-      }
-    }
-
-    function generarPrompt(mensaje) {
-      actualizarTema(mensaje);
-      const contexto = temaActual ? `Tema actual: ${temaActual}\n` : "";
-      const his = historial.slice(-5).map(m => `Usuario: ${m.u}\nMIRA: ${m.m}`).join("\n");
-      return `${contexto}${his}\nUsuario: ${mensaje}\nMIRA:`;
-    }
-
-    function agregarHistorial(u, m) {
-      historial.push({ u, m });
-      tiempoUltimaInteraccion = Date.now();
-    }
-
-    async function obtenerRespuestaIA(prompt) {
-      const API_KEY = "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";
-      const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
-
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.7
-        })
-      });
-      const data = await response.json();
-      return data.choices?.[0]?.message?.content || "Lo siento, no encontré una respuesta.";
+    function toggleAreas() {
+      const list = document.getElementById("areas-list");
+      list.classList.toggle("hidden");
     }
   </script>
   <script src="chat.js"></script>
