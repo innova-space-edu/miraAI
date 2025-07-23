@@ -31,22 +31,30 @@ function showThinking() {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Solo lee líneas normales, no fórmulas ni LaTeX
+// Solo lee líneas normales, no fórmulas ni LaTeX, y agrega pausas naturales
 function plainTextForVoice(markdown) {
-  return markdown
+  let text = markdown
     .split('\n')
     .filter(line =>
-      !line.trim().startsWith('$$') && !line.trim().endsWith('$$') && // No líneas de fórmulas centradas
+      !line.trim().startsWith('$$') && !line.trim().endsWith('$$') && // No fórmulas centradas
       !line.includes('$') && // No fórmulas inline
-      !/^ {0,3}`/.test(line) // No bloques de código por si acaso
+      !/^ {0,3}`/.test(line) // No bloques de código
     )
-    .join(' ')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Quita negritas Markdown
-    .replace(/\*([^*]+)\*/g, '$1')      // Quita cursivas Markdown
+    .join('. ') // Une cada línea con punto y espacio para mejorar pausas
+    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Quita negritas
+    .replace(/\*([^*]+)\*/g, '$1')      // Quita cursivas
     .replace(/__([^_]+)__/g, '$1')
     .replace(/_([^_]+)_/g, '$1')
+    .replace(/([.,;:!?\)])([^\s.])/g, '$1 $2') // Asegura espacio después de puntuación
     .replace(/\s+/g, ' ')
     .trim();
+
+  // Elimina puntos dobles (por unir dos líneas con punto)
+  text = text.replace(/\.{2,}/g, '.');
+  // Elimina punto final extra si está repetido
+  text = text.replace(/\. \./g, '. ');
+
+  return text;
 }
 
 // Voz y halo solo en texto limpio
