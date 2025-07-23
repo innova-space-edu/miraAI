@@ -1,6 +1,23 @@
 const API_KEY = "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";
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
+// Prompt actualizado: explicación previa, sin LaTeX en "Donde:", sigue el hilo
+const SYSTEM_PROMPT = `
+Eres MIRA, una asistente virtual educativa creada por Innova Space y OpenAI.
+
+Responde siempre de forma clara, natural y ordenada, como ChatGPT. Utiliza títulos, listas, tablas y explicaciones sencillas.
+
+Cuando te pidan fórmulas:
+- Antes de mostrar la fórmula en LaTeX, escribe SIEMPRE una frase literal explicando la relación con palabras simples (por ejemplo: "La velocidad media es la variación de la posición dividido por la variación del tiempo").
+- Después, muestra la fórmula en LaTeX.
+- Cuando expliques después de "Donde:", NUNCA uses $ ni $$ ni LaTeX ni símbolos especiales: Escribe las variables y nombres en texto simple, así: v_m es la velocidad media, Delta x es el desplazamiento, Delta t es el intervalo de tiempo.
+- NO pongas signos de dólar en la explicación, solo en la fórmula.
+- Corrige errores ortográficos automáticamente. Si la pregunta es ambigua, interpreta o pide aclaración.
+- Mantén el contexto del usuario: si te hacen preguntas como "dame otro ejemplo", "explícalo de nuevo", "ahora con valores diferentes", responde siguiendo el hilo de la conversación anterior.
+
+Responde siempre en español, a menos que el usuario indique otro idioma.
+`;
+
 // Halo animado solo cuando habla
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
@@ -79,23 +96,6 @@ function renderMarkdown(text) {
   return marked.parse(text);
 }
 
-// Prompt reducido para máximo contexto y libertad del modelo
-const SYSTEM_PROMPT = `
-Eres MIRA, una asistente virtual educativa creada por Innova Space y OpenAI.
-
-Responde siempre de forma clara y ordenada, como ChatGPT. Utiliza títulos, listas, tablas y explicaciones sencillas. Si la pregunta es sobre fórmulas, primero da una breve explicación y luego muestra la fórmula en LaTeX.
-
-Corrige errores ortográficos del usuario automáticamente. Si la pregunta es ambigua, interpreta o pide aclaración. Responde siempre en español, a menos que el usuario indique otro idioma.
-`;
-
-// Saludo hablado inicial (al cargar la página)
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
-    setAvatarTalking(false);
-  }, 900);
-});
-
 // Para evitar problemas de inyección
 function escapeHtml(text) {
   return text.replace(/[&<>"']/g, function (m) {
@@ -109,30 +109,22 @@ function escapeHtml(text) {
   });
 }
 
-async function askAI(userMessage) {
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userMessage }
-      ],
-      temperature: 0.7
-    })
-  });
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || "";
-}
+// Memoria de conversación (hilo)
+const chatHistory = [
+  { role: "system", content: SYSTEM_PROMPT }
+];
+
+// Saludo hablado inicial (al cargar la página)
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
+    setAvatarTalking(false);
+  }, 900);
+});
 
 async function sendMessage() {
   const input = document.getElementById("user-input");
   const chatBox = document.getElementById("chat-box");
-
   const userMessage = input.value.trim();
   if (!userMessage) return;
 
@@ -140,8 +132,30 @@ async function sendMessage() {
   input.value = "";
   showThinking();
 
+  // Agrega mensaje de usuario al historial
+  chatHistory.push({ role: "user", content: userMessage });
+
+  // Mantén solo los últimos 8 mensajes (puedes ajustar)
+  if (chatHistory.length > 9) {
+    chatHistory.splice(1, chatHistory.length - 8); // deja system y los últimos 8
+  }
+
   try {
-    let aiReply = await askAI(userMessage);
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: chatHistory,
+        temperature: 0.7
+      })
+    });
+
+    const data = await response.json();
+    let aiReply = data.choices?.[0]?.message?.content || "";
 
     // Si la respuesta es vacía o genérica, busca en Wikipedia
     if (
@@ -162,7 +176,10 @@ async function sendMessage() {
       }
     }
 
-    // Renderiza la respuesta en pantalla
+    // Agrega respuesta al historial para mantener el hilo
+    chatHistory.push({ role: "assistant", content: aiReply });
+
+    document.getElementById("thinking")?.remove();
     const html = renderMarkdown(aiReply);
     chatBox.innerHTML += `
       <div>
@@ -172,10 +189,8 @@ async function sendMessage() {
     `;
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    // Solo lee explicación, no fórmulas
     speak(aiReply);
 
-    // Re-renderizar MathJax para fórmulas
     if (window.MathJax) MathJax.typesetPromise();
 
   } catch (error) {
