@@ -1,6 +1,14 @@
 const API_KEY = "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";
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
+// Saludo hablado inicial (al cargar la página)
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    speak("MIRA: ¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
+    setAvatarTalking(false);
+  }, 900);
+});
+
 // Halo animado solo cuando habla
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
