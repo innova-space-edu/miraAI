@@ -1,4 +1,4 @@
-const API_KEY = "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";
+const API_KEY = "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";
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 // Halo animado solo cuando habla
@@ -84,13 +84,14 @@ Cuando debas mostrar fórmulas, ecuaciones, funciones, expresiones algebraicas, 
 - Nunca mezcles signos de dólar ni código LaTeX en la explicación textual. La explicación debe ser solo palabras normales.
 - Ejemplo correcto:
 
-  Supongamos que queremos expandir el binomio al cubo. La fórmula se utiliza para elevar una suma al cubo y se expresa así:
+  La velocidad media es igual al desplazamiento dividido por el intervalo de tiempo.
   $$
-  (x + 2)^3 = x^3 + 3x^2(2) + 3x(2)^2 + 2^3 = x^3 + 6x^2 + 12x + 8
+  v_m = \\frac{\\Delta x}{\\Delta t}
   $$
   Donde:
-  - **x** es la variable.
-  - **2** es el término constante.
+  - **v_m** es la velocidad media.
+  - **Δx** es el desplazamiento total.
+  - **Δt** es el intervalo de tiempo.
 
 - Ejemplo INCORRECTO (evita esto):
 
@@ -122,7 +123,7 @@ Responde siempre en español, a menos que el usuario pida otro idioma.
 // Saludo hablado inicial (al cargar la página)
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
-    speak("¡Hola!, Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
+    speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
     setAvatarTalking(false);
   }, 900);
 });
@@ -140,6 +141,26 @@ function escapeHtml(text) {
   });
 }
 
+async function askAI(userMessage) {
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userMessage }
+      ],
+      temperature: 0.7
+    })
+  });
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
 async function sendMessage() {
   const input = document.getElementById("user-input");
   const chatBox = document.getElementById("chat-box");
@@ -152,41 +173,43 @@ async function sendMessage() {
   showThinking();
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userMessage }
-        ],
-        temperature: 0.7
-      })
-    });
+    let aiReply = await askAI(userMessage);
 
-    const data = await response.json();
-    document.getElementById("thinking")?.remove();
-    let aiReply = data.choices?.[0]?.message?.content || "";
-
-    // Respuestas fijas para preguntas de presentación, incluso con faltas
+    // Si la respuesta es vacía, intenta una vez más
     if (
       !aiReply ||
       aiReply.toLowerCase().includes("no se pudo") ||
       aiReply.toLowerCase().includes("no encontré una respuesta")
     ) {
+      // Preguntas típicas de presentación, incluso con faltas
       if (
         /kien eres|quien eres|kien es mira|quien es mira|k eres|q eres|qué eres|ke eres|q puedes aser|qué puedes hacer|q asés|qué haces|qué asés|ke funcion tienes|qué funcion tienes|de donde vienes|de donde bvienes|presentate|preséntate|que puedes hacer|quien eres tu|quien sos|quien sos vos|quien soy|quien estoy|quien/.test(userMessage.toLowerCase())
       ) {
         aiReply = "Soy MIRA, una asistente virtual creada por Innova Space y OpenAI. Estoy diseñada para ayudarte a aprender y resolver tus dudas de manera clara, amigable y personalizada, en todas las materias escolares. Puedes preguntarme sobre matemáticas, ciencias, historia, tecnología y mucho más.";
+      } else if (/formula|fórmula|velocidad media|media velocidad/.test(userMessage.toLowerCase())) {
+        // Sugerir ejemplo explícito para fórmulas
+        aiReply = `La velocidad media es igual al desplazamiento dividido por el intervalo de tiempo.
+$$
+v_m = \\frac{\\Delta x}{\\Delta t}
+$$
+Donde:
+- **v_m** es la velocidad media.
+- **Δx** es el desplazamiento total.
+- **Δt** es el intervalo de tiempo.`;
       } else {
-        // Consulta Wikipedia solo si es necesario
-        const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
-        const wikiData = await wiki.json();
-        aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
+        // Intenta una vez más al modelo (a veces la segunda vez funciona)
+        aiReply = await askAI(userMessage);
+
+        // Si aún no hay respuesta, busca en Wikipedia
+        if (
+          !aiReply ||
+          aiReply.toLowerCase().includes("no se pudo") ||
+          aiReply.toLowerCase().includes("no encontré una respuesta")
+        ) {
+          const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
+          const wikiData = await wiki.json();
+          aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
+        }
       }
     }
 
