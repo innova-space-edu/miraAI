@@ -122,7 +122,7 @@ Responde siempre en español, a menos que el usuario pida otro idioma.
 // Saludo hablado inicial (al cargar la página)
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
-    speak("MIRA: ¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
+    speak("¡Hola!, Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
     setAvatarTalking(false);
   }, 900);
 });
