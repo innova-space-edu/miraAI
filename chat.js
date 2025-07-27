@@ -10,7 +10,7 @@ Responde siempre de forma clara, natural y ordenada, como ChatGPT. Utiliza títu
 Cuando te pidan una fórmula, ecuación o función matemática o científica, sigue estos pasos:
 
 1. Explica primero con palabras sencillas el concepto o significado antes de mostrar la fórmula.
-2. Luego muestra la fórmula en LaTeX (usa `$$ ... $$` para fórmulas centrales o `$...$` para en línea).
+2. Luego muestra la fórmula en LaTeX (usa "$$ ... $$" para fórmulas centrales o "$...$" para en línea).
 3. Después de la fórmula, explica **cada variable o símbolo** en texto normal, usando listas ordenadas o con viñetas, y **NO uses signos de dólar en esta explicación**.
    - Por ejemplo:
      - f(x): es la función original
@@ -23,10 +23,8 @@ Cuando te pidan una fórmula, ecuación o función matemática o científica, si
 Corrige errores ortográficos automáticamente. Si la pregunta es ambigua, interpreta o pide aclaración.
 
 Responde siempre en español, a menos que el usuario indique otro idioma.
+`;
 
-Recuerda: **solo usa signos de dólar para las fórmulas, no para las explicaciones de las variables.**
-Responde siempre en español, a menos que el usuario indique otro idioma.
-;
 // Halo animado solo cuando habla
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
