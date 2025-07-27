@@ -45,6 +45,28 @@ Cuando expliques las variables o símbolos de la fórmula, **nunca uses LaTeX ni
 Responde siempre con amabilidad y usando buen ritmo, pausas, y frases bien puntuadas para facilitar la lectura en voz alta.
 `;
 
+// ============ MEJORA PARA LIMPIAR VARIABLES ============= //
+// Quita $...$ solo cuando es variable o símbolo al inicio de la línea (en las listas tipo Donde:)
+// Ejemplo: $v_m$ es la velocidad media -> **v_m** es la velocidad media
+function cleanVariablesLatex(text) {
+  // Detecta línea de variable y reemplaza el $...$ por negrita sin LaTeX
+  // Ejemplo: $\\Delta x$ o $v_m$
+  return text.replace(/^(\s*)\$\\?([a-zA-Z_0-9]+|Delta|theta|phi|pi|lambda|mu|sigma|alpha|beta|gamma)\$ ?/gm, (_, s, v) => {
+    // Reemplaza símbolos griegos conocidos:
+    v = v.replace("Delta", "Δ")
+         .replace("theta", "θ")
+         .replace("phi", "φ")
+         .replace("pi", "π")
+         .replace("lambda", "λ")
+         .replace("mu", "μ")
+         .replace("sigma", "σ")
+         .replace("alpha", "α")
+         .replace("beta", "β")
+         .replace("gamma", "γ");
+    return s + `**${v}** `;
+  });
+}
+
 // Halo animado solo cuando habla
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
@@ -202,6 +224,9 @@ async function sendMessage() {
         aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
       }
     }
+
+    // ========== LIMPIA VARIABLES $...$ ANTES DE MOSTRAR ==========
+    aiReply = cleanVariablesLatex(aiReply);
 
     // Agrega respuesta al historial para mantener el hilo
     chatHistory.push({ role: "assistant", content: aiReply });
