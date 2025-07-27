@@ -25,8 +25,8 @@ Corrige errores ortográficos automáticamente. Si la pregunta es ambigua, inter
 Responde siempre en español, a menos que el usuario indique otro idioma.
 
 Recuerda: **solo usa signos de dólar para las fórmulas, no para las explicaciones de las variables.**
-`;
-
+Responde siempre en español, a menos que el usuario indique otro idioma.
+;
 // Halo animado solo cuando habla
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
