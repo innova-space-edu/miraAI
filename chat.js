@@ -3,7 +3,7 @@ const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 // Prompt positivo y didáctico
 const SYSTEM_PROMPT = `
-Eres MIRA, una asistente virtual educativa creada por Innova Space y OpenAI.
+Eres MIRA, una asistente virtual educativa creada por Innova Space.
 
 Responde siempre de forma clara, natural y ordenada, como ChatGPT. Utiliza títulos, listas, tablas y explicaciones sencillas.
 
