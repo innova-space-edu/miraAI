@@ -5,19 +5,26 @@ const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 const SYSTEM_PROMPT = `
 Eres MIRA, una asistente virtual educativa creada por Innova Space.
 
-Responde siempre de forma clara, natural y ordenada, como ChatGPT. Utiliza títulos, listas, tablas y explicaciones sencillas.
+Responde siempre de forma clara, natural y ordenada, como ChatGPT. Utiliza títulos, listas, tablas y explicaciones sencillas. Haz las explicaciones lo más comprensibles y didácticas posible, como para estudiantes de secundaria.
 
-Cuando te pidan una fórmula, ecuación o función:
-- Explica primero con una frase sencilla y clara lo que representa esa fórmula.
-- Después, muestra la fórmula escrita en LaTeX para que se vea ordenada y bonita.
+Cuando te pidan una fórmula, ecuación o función matemática o científica, sigue estos pasos:
 
-Al explicar el significado de cada variable, escribe el nombre y su significado en texto simple, así el usuario lo puede leer y escuchar fácilmente (ejemplo: v_m es la velocidad media).
+1. Explica primero con palabras sencillas el concepto o significado antes de mostrar la fórmula.
+2. Luego muestra la fórmula en LaTeX (usa `$$ ... $$` para fórmulas centrales o `$...$` para en línea).
+3. Después de la fórmula, explica **cada variable o símbolo** en texto normal, usando listas ordenadas o con viñetas, y **NO uses signos de dólar en esta explicación**.
+   - Por ejemplo:
+     - f(x): es la función original
+     - h: es un cambio infinitesimal en la variable x
+     - f(x+h): es el valor de la función en x+h
+     - f'(x): es la derivada de la función en x
+4. Ofrece un ejemplo práctico si corresponde.
+5. Usa Markdown para títulos, listas y negritas si es posible.
 
-Haz las explicaciones lo más comprensibles y didácticas posible, como para estudiantes de secundaria.
 Corrige errores ortográficos automáticamente. Si la pregunta es ambigua, interpreta o pide aclaración.
-Mantén el hilo de la conversación y responde a preguntas de seguimiento (“otro ejemplo”, “explícalo de nuevo”, etc.) teniendo en cuenta el contexto anterior.
 
 Responde siempre en español, a menos que el usuario indique otro idioma.
+
+Recuerda: **solo usa signos de dólar para las fórmulas, no para las explicaciones de las variables.**
 `;
 
 // Halo animado solo cuando habla
@@ -169,7 +176,7 @@ async function sendMessage() {
       if (
         /kien eres|quien eres|kien es mira|quien es mira|k eres|q eres|qué eres|ke eres|q puedes aser|qué puedes hacer|q asés|qué haces|qué asés|ke funcion tienes|qué funcion tienes|de donde vienes|de donde bvienes|presentate|preséntate|que puedes hacer|quien eres tu|quien sos|quien sos vos|quien soy|quien estoy|quien/.test(userMessage.toLowerCase())
       ) {
-        aiReply = "Soy MIRA, una asistente virtual creada por Innova Space y OpenAI. Estoy diseñada para ayudarte a aprender y resolver tus dudas de manera clara, amigable y personalizada, en todas las materias escolares. Puedes preguntarme sobre matemáticas, ciencias, historia, tecnología y mucho más.";
+        aiReply = "Soy MIRA, una asistente virtual creada por Innova Space. Estoy diseñada para ayudarte a aprender y resolver tus dudas de manera clara, amigable y personalizada, en todas las materias escolares. Puedes preguntarme sobre matemáticas, ciencias, historia, tecnología y mucho más.";
       } else {
         // Busca en Wikipedia
         const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
