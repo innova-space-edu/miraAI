@@ -102,20 +102,65 @@ Donde:
 - Siempre usa títulos, listas, negritas y una estructura visual atractiva.
 - Si la respuesta es extensa, ofrece al final un breve resumen si es útil.
 - Interpreta y responde aunque la pregunta tenga errores ortográficos o no esté clara; pide aclaración de forma breve y amable si es necesario.
+- Si te preguntan varias veces lo mismo, mantén el contexto y responde de manera conversacional.
+- Si no tienes información exacta, comparte lo que sepas, busca ejemplos o explica el concepto de la mejor forma posible.
+- Si una variable contiene letras griegas (como Δx o θ), usa el símbolo directamente, sin LaTeX.
+- Siempre responde en positivo, **sin negaciones** ni restricciones innecesarias.
+- Nunca incluyas fórmulas o ecuaciones en la voz: solo lee la explicación antes y después, para que la respuesta hablada sea clara y fácil de seguir.
 
 Responde siempre con amabilidad, buen ritmo y usando frases bien puntuadas, para que la experiencia sea didáctica y agradable, tanto al leer como al escuchar.
 `;
 
-// Función para detectar preguntas sobre la identidad de MIRA
+// Normalizar texto para detectar identidad o preguntas absurdas
+function normalizarTexto(str) {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // quita tildes
+    .replace(/[^a-zA-Z0-9\s]/g, ""); // quita símbolos raros
+}
+
+// Detecta identidad con faltas de ortografía
 function esPreguntaIdentidad(pregunta) {
+  const p = normalizarTexto(pregunta);
   const patrones = [
-    /quién eres/i,
-    /como te llamas/i,
-    /eres una (ia|inteligencia artificial)/i,
-    /qué eres/i,
-    /preséntate/i
+    /quien eres/,
+    /kien eres/,
+    /quien sos/,
+    /quien es usted/,
+    /quien es/,
+    /quien eress?*/,
+    /como te llamas?/,
+    /como t llamas?/,
+    /eres una (ia|inteligencia artificial|maquina|robot)/,
+    /que eres?/,
+    /presntate/,
+    /presentate/,
+    /dime tu nombre/,
+    /tu nombre/,
+    /eres una asistente/,
+    /eres tu/,
+    /eres mira/,
+    /quien eres mira/
   ];
-  return patrones.some(rx => rx.test(pregunta));
+  return patrones.some(rx => rx.test(p));
+}
+
+// Detectar si la pregunta es absurda, broma o sin sentido
+function esPreguntaAbsurda(pregunta) {
+  const p = normalizarTexto(pregunta);
+  const patronesAbsurdo = [
+    /^a{3,}$/,
+    /asdf|asd|qwe|zxc|lol|jeje|jaja|xd|omg/,
+    /pizza voladora|elefantes.*auto|gatos.*espacio/,
+    /cual es el significado de la vida.*pizza/i,
+    /cuantos (.*)?cab(en|en en).*pizza/i,
+    /que pasa si la luna es de queso/i,
+    /(\d+)?[a-z]{8,}/
+  ];
+  // Sin vocales, palabras cortadas o sólo símbolos
+  if (!/[aeiouáéíóú]/.test(p)) return true;
+  return patronesAbsurdo.some(rx => rx.test(p));
 }
 
 // Autosaludo inicial
@@ -158,12 +203,14 @@ async function sendMessage() {
     document.getElementById("thinking")?.remove();
     let aiReply = data.choices?.[0]?.message?.content || "";
 
-    // Responde siempre la IA, jamás Wikipedia ni mensaje genérico
+    // Responde siempre la IA, nunca Wikipedia ni genérico, con control de ortografía y absurdo
     if (!aiReply || aiReply.toLowerCase().includes("no se pudo")) {
       if (esPreguntaIdentidad(userMessage)) {
-        aiReply = "Soy MIRA, una asistente virtual creada por Innova Space para ayudarte en todo lo que necesites: responder dudas, explicar conceptos y acompañarte en tu aprendizaje.";
+        aiReply = "Soy MIRA, tu asistente virtual creada por Innova Space para ayudarte, aprender juntos y acompañarte en todo momento.";
+      } else if (esPreguntaAbsurda(userMessage)) {
+        aiReply = "No entendí bien tu pregunta, pero si necesitas ayuda real, ¡puedes escribirla de otra manera! Estoy aquí para ayudarte en temas escolares, dudas y explicaciones.";
       } else {
-        aiReply = "No encontré una respuesta clara, pero si quieres, puedo intentar explicarlo de otra manera o buscar juntos una alternativa.";
+        aiReply = "No encontré una respuesta clara, pero puedo intentar explicarlo de otra manera, buscar ejemplos o ayudarte a aclarar tu pregunta. ¿Quieres intentarlo de nuevo?";
       }
     }
 
