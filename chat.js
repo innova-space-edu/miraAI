@@ -1,4 +1,4 @@
-const API_KEY = "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";
+const API_KEY = "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";
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 // Prompt positivo y didáctico
