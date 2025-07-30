@@ -1,35 +1,50 @@
-const API_KEY = "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";
+const API_KEY = "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";
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
-// Prompt abierto y sin restricciones
-const SYSTEM_PROMPT = `
-Eres MIRA, una asistente virtual creada por Innova Space. Responde siempre en español, de forma clara, amable y explicativa, sin restricciones de ningún tipo. Si te preguntan quién eres, preséntate como una asistente virtual de Innova Space. Responde a cualquier pregunta, aunque tenga faltas ortográficas o esté poco clara. Interpreta y da la mejor respuesta posible en todos los casos, siempre con un tono positivo y educativo.
-`;
-
-// Halo animado solo cuando habla
+// Halo animado
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
   if (!avatar) return;
-  if (isTalking) {
-    avatar.classList.add("pulse");
-  } else {
-    avatar.classList.remove("pulse");
-  }
+  avatar.classList.toggle("pulse", isTalking);
+  avatar.classList.toggle("still", !isTalking);
 }
 
-// Convierte Markdown a texto plano para la voz
+// Enter para enviar
+document.getElementById("user-input").addEventListener("keydown", function(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    sendMessage();
+  }
+});
+
+// Indicador de carga
+function showThinking() {
+  const chatBox = document.getElementById("chat-box");
+  const thinking = document.createElement("div");
+  thinking.id = "thinking";
+  thinking.className = "text-purple-300 italic";
+  thinking.innerHTML = `<span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>`;
+  chatBox.appendChild(thinking);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// Quitar negritas/cursivas y bloques LaTeX: voz limpia
 function plainTextForVoice(markdown) {
-  let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1');
-  text = text.replace(/\*([^*]+)\*/g, '$1');
-  text = text.replace(/__([^_]+)__/g, '$1');
-  text = text.replace(/_([^_]+)_/g, '$1');
+  // Quitar todas las negritas/cursivas Markdown
+  let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1'); // **negrita**
+  text = text.replace(/\*([^*]+)\*/g, '$1');             // *cursiva*
+  text = text.replace(/__([^_]+)__/g, '$1');             // __negrita__
+  text = text.replace(/_([^_]+)_/g, '$1');               // _cursiva_
+  // Elimina todos los bloques $$...$$ (fórmulas centradas)
   text = text.replace(/\$\$[\s\S]*?\$\$/g, ' ');
+  // Elimina todos los bloques $...$ (en línea)
   text = text.replace(/\$[^$]*\$/g, ' ');
+  // Limpia exceso de espacios
   text = text.replace(/\s+/g, ' ').trim();
   return text;
 }
 
-// Lee en voz alta la respuesta
+// Voz y halo solo en texto limpio
 function speak(text) {
   try {
     const plain = plainTextForVoice(text);
@@ -46,30 +61,52 @@ function speak(text) {
   }
 }
 
-// Renderiza Markdown si está disponible
+// Render Markdown y MathJax
 function renderMarkdown(text) {
-  if (typeof marked !== "undefined") {
-    return marked.parse(text);
-  }
-  return text;
+  return marked.parse(text);
 }
 
-// Indicador de que MIRA está pensando
-function showThinking() {
-  const chatBox = document.getElementById("chat-box");
-  const thinking = document.createElement("div");
-  thinking.id = "thinking";
-  thinking.className = "text-purple-300 italic";
-  thinking.innerHTML = `<span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>`;
-  chatBox.appendChild(thinking);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
+// PROMPT mejorado: explicación previa, luego fórmula bonita
+const SYSTEM_PROMPT = `
+Tu eres MIRA, Modular Intelligent Responsive Assistant. En español: Asistente Modular, Inteligente y Reactivo. Creada por Innova Space y OpenAi.
+Responde SIEMPRE con estructura ordenada y clara, como ChatGPT.
 
-// Envía el mensaje al modelo y procesa la respuesta
+Si el usuario escribe palabras incompletas, con errores ortográficos, abreviaturas o frases poco claras, intenta corregir o interpretar automáticamente el mensaje para dar la mejor respuesta posible usando el contexto. Si no es completamente claro, ofrece alternativas breves (por ejemplo: "¿Quizás quisiste decir...?" o "¿Te refieres a...?") y pide aclaración solo si ninguna alternativa es adecuada.
+
+Cuando debas mostrar fórmulas, ecuaciones, funciones, expresiones algebraicas, matrices o símbolos matemáticos, primero escribe una frase explicando su significado con palabras simples y comprensibles para estudiantes (por ejemplo: "La velocidad media es igual al desplazamiento dividido por el intervalo de tiempo."). Después, incluye la ecuación en LaTeX usando los signos de dólar ($ para ecuaciones en línea, $$ para centradas), para que se vea como fórmula, pero NO expliques el código ni los signos de dólar.
+
+Ejemplo de formato ideal:
+"La velocidad media es igual al desplazamiento dividido por el intervalo de tiempo:
+$$
+v_m = \\frac{\\Delta x}{\\Delta t}
+$$
+Donde:
+- **v_m** es la velocidad media.
+- **Δx** es el desplazamiento total.
+- **Δt** es el intervalo de tiempo."
+
+NO uses LaTeX ni signos de dólar para variables, letras ni números sueltos en listas de definición: escribe la variable como texto normal o en negrita/cursiva usando Markdown.
+
+Utiliza frases completas, claras y bien puntuadas (usa puntos, comas y saltos de línea para pausas naturales y buena lectura en voz alta).
+
+No uses bloques de código ni asteriscos a menos que el usuario lo pida explícitamente.
+
+Utiliza listas, tablas y títulos para organizar la información. Resume si es posible.
+
+Si no sabes la respuesta, consulta Wikipedia.
+`;
+
+// Autosaludo inicial
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
+    setAvatarTalking(false);
+  }, 900);
+});
+
 async function sendMessage() {
   const input = document.getElementById("user-input");
   const chatBox = document.getElementById("chat-box");
-  if (!input || !chatBox) return;
 
   const userMessage = input.value.trim();
   if (!userMessage) return;
@@ -97,16 +134,23 @@ async function sendMessage() {
 
     const data = await response.json();
     document.getElementById("thinking")?.remove();
+    let aiReply = data.choices?.[0]?.message?.content || "";
 
-    let aiReply = data.choices?.[0]?.message?.content?.trim();
-    if (!aiReply) aiReply = "Aquí estoy para ayudarte. ¿Quieres intentar con otra pregunta?";
+    if (!aiReply || aiReply.toLowerCase().includes("no se pudo")) {
+      // Consulta Wikipedia solo si es necesario
+      const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
+      const wikiData = await wiki.json();
+      aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
+    }
 
     const html = renderMarkdown(aiReply);
     chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
 
+    // Voz + halo animado SOLO para el texto limpio
     speak(aiReply);
 
+    // Re-renderizar MathJax para fórmulas
     if (window.MathJax) MathJax.typesetPromise();
 
   } catch (error) {
@@ -117,36 +161,5 @@ async function sendMessage() {
   }
 }
 
-// Inicializa eventos: autosaludo, enter y botón
-window.addEventListener('DOMContentLoaded', () => {
-  setAvatarTalking(false);
-
-  // Autosaludo siempre hablado (¡solo una vez al cargar la página!)
-  setTimeout(() => {
-    speak("¡Hola! Soy MIRA, tu asistente virtual de Innova Space. ¿En qué puedo ayudarte hoy?");
-    setAvatarTalking(false);
-  }, 900);
-
-  const input = document.getElementById("user-input");
-  const btns = document.querySelectorAll("button, [onclick^='sendMessage']");
-
-  // Elimina posibles doble-envíos si hay handlers HTML y JS
-  if (input) {
-    input.onkeydown = null;
-    input.addEventListener("keydown", function(event) {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        sendMessage();
-      }
-    });
-  }
-  // Botón enviar
-  const btn = document.getElementById("send-btn") || btns[0];
-  if (btn) {
-    btn.onclick = null;
-    btn.addEventListener("click", function(event) {
-      event.preventDefault();
-      sendMessage();
-    });
-  }
-});
+// Halo arranca quieto
+setAvatarTalking(false);
