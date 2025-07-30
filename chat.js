@@ -246,3 +246,6 @@ async function sendMessage() {
 
 // Halo arranca quieto
 setAvatarTalking(false);
+
+// **¡Agrega este listener después de definir sendMessage!**
+document.getElementById("send-btn").addEventListener("click", sendMessage);
