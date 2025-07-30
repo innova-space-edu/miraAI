@@ -33,16 +33,12 @@ function showThinking() {
 
 // Quitar negritas/cursivas y bloques LaTeX: voz limpia
 function plainTextForVoice(markdown) {
-  // Quitar todas las negritas/cursivas Markdown
-  let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1'); // **negrita**
-  text = text.replace(/\*([^*]+)\*/g, '$1');             // *cursiva*
-  text = text.replace(/__([^_]+)__/g, '$1');             // __negrita__
-  text = text.replace(/_([^_]+)_/g, '$1');               // _cursiva_
-  // Elimina todos los bloques $$...$$ (fórmulas centradas)
+  let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1');
+  text = text.replace(/\*([^*]+)\*/g, '$1');
+  text = text.replace(/__([^_]+)__/g, '$1');
+  text = text.replace(/_([^_]+)_/g, '$1');
   text = text.replace(/\$\$[\s\S]*?\$\$/g, ' ');
-  // Elimina todos los bloques $...$ (en línea)
   text = text.replace(/\$[^$]*\$/g, ' ');
-  // Limpia exceso de espacios
   text = text.replace(/\s+/g, ' ').trim();
   return text;
 }
@@ -69,99 +65,10 @@ function renderMarkdown(text) {
   return marked.parse(text);
 }
 
-// PROMPT mejorado: explicación previa, luego fórmula bonita
+// PROMPT SIMPLE Y FUNCIONAL
 const SYSTEM_PROMPT = `
-Eres MIRA, una asistente virtual de inteligencia artificial creada por Innova Space para ayudar a estudiantes y profesores en todas las materias escolares. Responde siempre en español, de manera clara, ordenada y fácil de entender, adaptando el nivel de detalle según la edad, el nivel o la necesidad del usuario.
-
-Cuando te soliciten una **fórmula, ecuación, función matemática o científica**, sigue este formato:
-
-1. **Explica primero con palabras simples** el significado o el concepto antes de mostrar la fórmula.
-2. **Después muestra la fórmula o ecuación en LaTeX** (usa signos de dólar: \$...\$ para fórmulas en línea o \$\$...\$\$ para fórmulas centradas).
-3. **Luego explica cada variable o símbolo en texto normal** (NO uses LaTeX ni signos de dólar en esta parte, solo texto plano, puedes usar negrita o listas para hacerlo más claro).
-4. **Ofrece un ejemplo práctico o aplicación real si es posible**.
-
-**Ejemplo de respuesta:**
----
-La velocidad media indica el cambio de posición en relación al tiempo que transcurre.
-
-La fórmula es:
-$$
-v_m = \\frac{\\Delta x}{\\Delta t}
-$$
-
-Donde:
-- **v_m** es la velocidad media
-- **Δx** es el cambio en la posición
-- **Δt** es el intervalo de tiempo
-
-¿Quieres ver un ejemplo de cómo aplicarla?
----
-
-**Reglas clave:**  
-- Cuando expliques las variables o símbolos, **usa solo texto plano** (nunca LaTeX ni signos de dólar).
-- Siempre usa títulos, listas, negritas y una estructura visual atractiva.
-- Si la respuesta es extensa, ofrece al final un breve resumen si es útil.
-- Interpreta y responde aunque la pregunta tenga errores ortográficos o no esté clara; pide aclaración de forma breve y amable si es necesario.
-- Si te preguntan varias veces lo mismo, mantén el contexto y responde de manera conversacional.
-- Si no tienes información exacta, comparte lo que sepas, busca ejemplos o explica el concepto de la mejor forma posible.
-- Si una variable contiene letras griegas (como Δx o θ), usa el símbolo directamente, sin LaTeX.
-- Siempre responde en positivo, **sin negaciones** ni restricciones innecesarias.
-- Nunca incluyas fórmulas o ecuaciones en la voz: solo lee la explicación antes y después, para que la respuesta hablada sea clara y fácil de seguir.
-
-Responde siempre con amabilidad, buen ritmo y usando frases bien puntuadas, para que la experiencia sea didáctica y agradable, tanto al leer como al escuchar.
+Eres MIRA, una asistente virtual creada por Innova Space. Responde siempre en español. Si te preguntan quién eres, preséntate brevemente como una asistente virtual de Innova Space. Para cualquier otra pregunta, responde de forma clara, amable, explicativa y sin restricciones. Puedes ayudar con tareas escolares, conceptos, explicaciones, ejemplos y cualquier tema académico. Si el usuario comete errores ortográficos o la pregunta no es clara, interpreta lo mejor posible y responde igual. 
 `;
-
-// Normalizar texto para detectar identidad o preguntas absurdas
-function normalizarTexto(str) {
-  return str
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // quita tildes
-    .replace(/[^a-zA-Z0-9\s]/g, ""); // quita símbolos raros
-}
-
-// Detecta identidad con faltas de ortografía
-function esPreguntaIdentidad(pregunta) {
-  const p = normalizarTexto(pregunta);
-  const patrones = [
-    /quien eres/,
-    /kien eres/,
-    /quien sos/,
-    /quien es usted/,
-    /quien es/,
-    /quien eress?*/,
-    /como te llamas?/,
-    /como t llamas?/,
-    /eres una (ia|inteligencia artificial|maquina|robot)/,
-    /que eres?/,
-    /presntate/,
-    /presentate/,
-    /dime tu nombre/,
-    /tu nombre/,
-    /eres una asistente/,
-    /eres tu/,
-    /eres mira/,
-    /quien eres mira/
-  ];
-  return patrones.some(rx => rx.test(p));
-}
-
-// Detectar si la pregunta es absurda, broma o sin sentido
-function esPreguntaAbsurda(pregunta) {
-  const p = normalizarTexto(pregunta);
-  const patronesAbsurdo = [
-    /^a{3,}$/,
-    /asdf|asd|qwe|zxc|lol|jeje|jaja|xd|omg/,
-    /pizza voladora|elefantes.*auto|gatos.*espacio/,
-    /cual es el significado de la vida.*pizza/i,
-    /cuantos (.*)?cab(en|en en).*pizza/i,
-    /que pasa si la luna es de queso/i,
-    /(\d+)?[a-z]{8,}/
-  ];
-  // Sin vocales, palabras cortadas o sólo símbolos
-  if (!/[aeiouáéíóú]/.test(p)) return true;
-  return patronesAbsurdo.some(rx => rx.test(p));
-}
 
 // Autosaludo inicial
 window.addEventListener('DOMContentLoaded', () => {
@@ -201,27 +108,14 @@ async function sendMessage() {
 
     const data = await response.json();
     document.getElementById("thinking")?.remove();
-    let aiReply = data.choices?.[0]?.message?.content || "";
-
-    // Responde siempre la IA, nunca Wikipedia ni genérico, con control de ortografía y absurdo
-    if (!aiReply || aiReply.toLowerCase().includes("no se pudo")) {
-      if (esPreguntaIdentidad(userMessage)) {
-        aiReply = "Soy MIRA, tu asistente virtual creada por Innova Space para ayudarte, aprender juntos y acompañarte en todo momento.";
-      } else if (esPreguntaAbsurda(userMessage)) {
-        aiReply = "No entendí bien tu pregunta, pero si necesitas ayuda real, ¡puedes escribirla de otra manera! Estoy aquí para ayudarte en temas escolares, dudas y explicaciones.";
-      } else {
-        aiReply = "No encontré una respuesta clara, pero puedo intentar explicarlo de otra manera, buscar ejemplos o ayudarte a aclarar tu pregunta. ¿Quieres intentarlo de nuevo?";
-      }
-    }
+    let aiReply = data.choices?.[0]?.message?.content || "¡Ups! No tengo una respuesta directa, pero dime si quieres que lo intente de otra manera.";
 
     const html = renderMarkdown(aiReply);
     chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    // Voz + halo animado SOLO para el texto limpio
     speak(aiReply);
 
-    // Re-renderizar MathJax para fórmulas
     if (window.MathJax) MathJax.typesetPromise();
 
   } catch (error) {
