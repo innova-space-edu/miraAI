@@ -111,6 +111,18 @@ Donde:
 Responde siempre con amabilidad, buen ritmo y usando frases bien puntuadas, para que la experiencia sea didáctica y agradable, tanto al leer como al escuchar.
 `;
 
+// Función para detectar preguntas sobre la identidad de MIRA
+function esPreguntaIdentidad(pregunta) {
+  const patrones = [
+    /quién eres/i,
+    /como te llamas/i,
+    /eres una (ia|inteligencia artificial)/i,
+    /qué eres/i,
+    /preséntate/i
+  ];
+  return patrones.some(rx => rx.test(pregunta));
+}
+
 // Autosaludo inicial
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
@@ -151,12 +163,18 @@ async function sendMessage() {
     document.getElementById("thinking")?.remove();
     let aiReply = data.choices?.[0]?.message?.content || "";
 
+    // --- Cambios aquí para responder siempre quién es MIRA ---
     if (!aiReply || aiReply.toLowerCase().includes("no se pudo")) {
-      // Consulta Wikipedia solo si es necesario
-      const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
-      const wikiData = await wiki.json();
-      aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
+      if (esPreguntaIdentidad(userMessage)) {
+        aiReply = "Soy MIRA, una asistente virtual creada por Innova Space para ayudarte en todo lo que necesites: responder dudas, explicar conceptos y acompañarte en tu aprendizaje.";
+      } else {
+        // Consulta Wikipedia solo si es necesario
+        const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
+        const wikiData = await wiki.json();
+        aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
+      }
     }
+    // ----------------------------------------------------------
 
     const html = renderMarkdown(aiReply);
     chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
