@@ -94,6 +94,7 @@ function showThinking() {
 
 // Solo lee líneas normales, no fórmulas ni LaTeX, y agrega pausas naturales
 function plainTextForVoice(markdown) {
+  // Convierte el Markdown a solo el texto plano explicativo, sin fórmulas, sin LaTeX, y manteniendo el ritmo de la puntuación
   let text = markdown
     .split('\n')
     .filter(line =>
@@ -102,6 +103,7 @@ function plainTextForVoice(markdown) {
       !/^ {0,3}/.test(line) // No bloques de código
     )
     .join('. ')
+    // Mantiene las pausas naturales: cada punto, coma y salto de línea es una pausa
     .replace(/\*\*([^*]+)\*\*/g, '$1')  // Quita negritas
     .replace(/\*([^*]+)\*/g, '$1')      // Quita cursivas
     .replace(/__([^_]+)__/g, '$1')
@@ -110,10 +112,15 @@ function plainTextForVoice(markdown) {
     .replace(/\s+/g, ' ')
     .trim();
 
+  // Pausas extra en puntos suspensivos o doble punto
   text = text.replace(/\.{2,}/g, '.');
   text = text.replace(/\. \./g, '. ');
 
-  return text;
+  // Pausas más largas después de puntos y saltos de línea
+  text = text.replace(/([.!?])\s+/g, '$1 [PAUSA] ');
+
+  // Opcional: puedes agregar más pausas para mejorar la voz
+  return text.replace(/\[PAUSA\]/g, '... ');
 }
 
 // Voz y halo solo en texto limpio
@@ -123,6 +130,9 @@ function speak(text) {
     if (!plain) return;
     const msg = new SpeechSynthesisUtterance(plain);
     msg.lang = "es-ES";
+    msg.rate = 0.97; // velocidad un poco más pausada
+    msg.pitch = 1.02;
+    msg.volume = 1;
     window.speechSynthesis.cancel();
     setAvatarTalking(true);
     msg.onend = () => setAvatarTalking(false);
@@ -156,14 +166,23 @@ const chatHistory = [
   { role: "system", content: SYSTEM_PROMPT }
 ];
 
-// Saludo hablado inicial (al cargar la página)
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
+// ---- DESBLOQUEO DE VOZ POR PRIMERA ACCIÓN ----
+let saludoDado = false;
+function hablarSaludoSiFalta() {
+  if (!saludoDado) {
     speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
     setAvatarTalking(false);
-  }, 900);
-});
+    saludoDado = true;
+  }
+  // Oculta info de voz (si existe)
+  document.getElementById('voz-info')?.remove();
+}
+window.addEventListener("click", hablarSaludoSiFalta, { once: true });
+window.addEventListener("keydown", hablarSaludoSiFalta, { once: true });
 
+// ---- FIN DESBLOQUEO ----
+
+// async/await para enviar mensaje
 async function sendMessage() {
   const input = document.getElementById("user-input");
   const chatBox = document.getElementById("chat-box");
@@ -249,3 +268,15 @@ setAvatarTalking(false);
 
 // **¡Agrega este listener después de definir sendMessage!**
 document.getElementById("send-btn").addEventListener("click", sendMessage);
+
+// ------- (OPCIONAL) MENSAJE DE VOZ AL PIE DEL CHAT -------
+if (!document.getElementById('voz-info')) {
+  const chatBox = document.getElementById('chat-box');
+  if (chatBox) {
+    const vozDiv = document.createElement('div');
+    vozDiv.id = 'voz-info';
+    vozDiv.className = 'text-xs text-gray-300 mt-2 text-center';
+    vozDiv.innerHTML = '<span>La voz se activará cuando hagas clic o escribas tu primera pregunta.</span>';
+    chatBox.parentNode.appendChild(vozDiv);
+  }
+}
