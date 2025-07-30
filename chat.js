@@ -1,7 +1,11 @@
 const API_KEY = "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";
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
-// Halo animado solo cuando habla
+// PROMPT SIMPLE Y FUNCIONAL
+const SYSTEM_PROMPT = `
+Eres MIRA, una asistente virtual creada por Innova Space. Responde siempre en español. Si te preguntan quién eres, preséntate brevemente como una asistente virtual de Innova Space. Para cualquier otra pregunta, responde de forma clara, amable, explicativa y sin restricciones. Puedes ayudar con tareas escolares, conceptos, explicaciones, ejemplos y cualquier tema académico. Si el usuario comete errores ortográficos o la pregunta no es clara, interpreta lo mejor posible y responde igual. 
+`;
+
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
   if (!avatar) return;
@@ -12,26 +16,6 @@ function setAvatarTalking(isTalking) {
   }
 }
 
-// Enter para enviar
-document.getElementById("user-input").addEventListener("keydown", function(event) {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    sendMessage();
-  }
-});
-
-// Indicador de carga
-function showThinking() {
-  const chatBox = document.getElementById("chat-box");
-  const thinking = document.createElement("div");
-  thinking.id = "thinking";
-  thinking.className = "text-purple-300 italic";
-  thinking.innerHTML = `<span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>`;
-  chatBox.appendChild(thinking);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-// Quitar negritas/cursivas y bloques LaTeX: voz limpia
 function plainTextForVoice(markdown) {
   let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1');
   text = text.replace(/\*([^*]+)\*/g, '$1');
@@ -43,7 +27,6 @@ function plainTextForVoice(markdown) {
   return text;
 }
 
-// Voz y halo solo en texto limpio
 function speak(text) {
   try {
     const plain = plainTextForVoice(text);
@@ -60,23 +43,22 @@ function speak(text) {
   }
 }
 
-// Render Markdown y MathJax
 function renderMarkdown(text) {
-  return marked.parse(text);
+  if (typeof marked !== "undefined") {
+    return marked.parse(text);
+  }
+  return text;
 }
 
-// PROMPT SIMPLE Y FUNCIONAL
-const SYSTEM_PROMPT = `
-Eres MIRA, una asistente virtual creada por Innova Space. Responde siempre en español. Si te preguntan quién eres, preséntate brevemente como una asistente virtual de Innova Space. Para cualquier otra pregunta, responde de forma clara, amable, explicativa y sin restricciones. Puedes ayudar con tareas escolares, conceptos, explicaciones, ejemplos y cualquier tema académico. Si el usuario comete errores ortográficos o la pregunta no es clara, interpreta lo mejor posible y responde igual. 
-`;
-
-// Autosaludo inicial
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
-    setAvatarTalking(false);
-  }, 900);
-});
+function showThinking() {
+  const chatBox = document.getElementById("chat-box");
+  const thinking = document.createElement("div");
+  thinking.id = "thinking";
+  thinking.className = "text-purple-300 italic";
+  thinking.innerHTML = `<span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>`;
+  chatBox.appendChild(thinking);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
 
 async function sendMessage() {
   const input = document.getElementById("user-input");
@@ -126,5 +108,32 @@ async function sendMessage() {
   }
 }
 
-// Halo arranca quieto
-setAvatarTalking(false);
+window.addEventListener('DOMContentLoaded', () => {
+  setAvatarTalking(false);
+
+  // Saludo de bienvenida
+  setTimeout(() => {
+    speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
+    setAvatarTalking(false);
+  }, 900);
+
+  // Enter para enviar mensaje
+  const input = document.getElementById("user-input");
+  if (input) {
+    input.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+  }
+
+  // Botón enviar
+  const btn = document.getElementById("send-btn");
+  if (btn) {
+    btn.addEventListener("click", function(event) {
+      event.preventDefault();
+      sendMessage();
+    });
+  }
+});
