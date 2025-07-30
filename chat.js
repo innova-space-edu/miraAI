@@ -1,11 +1,12 @@
 const API_KEY = "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";
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
-// PROMPT SIMPLE Y FUNCIONAL
+// Prompt abierto y sin restricciones
 const SYSTEM_PROMPT = `
-Eres MIRA, una asistente virtual creada por Innova Space. Responde siempre en español. Si te preguntan quién eres, preséntate brevemente como una asistente virtual de Innova Space. Para cualquier otra pregunta, responde de forma clara, amable, explicativa y sin restricciones. Puedes ayudar con tareas escolares, conceptos, explicaciones, ejemplos y cualquier tema académico. Si el usuario comete errores ortográficos o la pregunta no es clara, interpreta lo mejor posible y responde igual. 
+Eres MIRA, una asistente virtual creada por Innova Space. Responde siempre en español, de forma clara, amable y explicativa, sin restricciones de ningún tipo. Si te preguntan quién eres, preséntate como una asistente virtual de Innova Space. Responde a cualquier pregunta, aunque tenga faltas ortográficas o esté poco clara. Interpreta y da la mejor respuesta posible en todos los casos, siempre con un tono positivo y educativo.
 `;
 
+// Halo animado solo cuando habla
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
   if (!avatar) return;
@@ -16,6 +17,7 @@ function setAvatarTalking(isTalking) {
   }
 }
 
+// Convierte Markdown a texto plano para la voz
 function plainTextForVoice(markdown) {
   let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1');
   text = text.replace(/\*([^*]+)\*/g, '$1');
@@ -27,6 +29,7 @@ function plainTextForVoice(markdown) {
   return text;
 }
 
+// Lee en voz alta la respuesta
 function speak(text) {
   try {
     const plain = plainTextForVoice(text);
@@ -43,6 +46,7 @@ function speak(text) {
   }
 }
 
+// Renderiza Markdown si está disponible
 function renderMarkdown(text) {
   if (typeof marked !== "undefined") {
     return marked.parse(text);
@@ -50,6 +54,7 @@ function renderMarkdown(text) {
   return text;
 }
 
+// Indicador de que MIRA está pensando
 function showThinking() {
   const chatBox = document.getElementById("chat-box");
   const thinking = document.createElement("div");
@@ -60,9 +65,11 @@ function showThinking() {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+// Envía el mensaje al modelo y procesa la respuesta
 async function sendMessage() {
   const input = document.getElementById("user-input");
   const chatBox = document.getElementById("chat-box");
+  if (!input || !chatBox) return;
 
   const userMessage = input.value.trim();
   if (!userMessage) return;
@@ -90,7 +97,9 @@ async function sendMessage() {
 
     const data = await response.json();
     document.getElementById("thinking")?.remove();
-    let aiReply = data.choices?.[0]?.message?.content || "¡Ups! No tengo una respuesta directa, pero dime si quieres que lo intente de otra manera.";
+
+    let aiReply = data.choices?.[0]?.message?.content?.trim();
+    if (!aiReply) aiReply = "Aquí estoy para ayudarte. ¿Quieres intentar con otra pregunta?";
 
     const html = renderMarkdown(aiReply);
     chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
@@ -108,18 +117,22 @@ async function sendMessage() {
   }
 }
 
+// Inicializa eventos: autosaludo, enter y botón
 window.addEventListener('DOMContentLoaded', () => {
   setAvatarTalking(false);
 
-  // Saludo de bienvenida
+  // Autosaludo siempre hablado (¡solo una vez al cargar la página!)
   setTimeout(() => {
-    speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
+    speak("¡Hola! Soy MIRA, tu asistente virtual de Innova Space. ¿En qué puedo ayudarte hoy?");
     setAvatarTalking(false);
   }, 900);
 
-  // Enter para enviar mensaje
   const input = document.getElementById("user-input");
+  const btns = document.querySelectorAll("button, [onclick^='sendMessage']");
+
+  // Elimina posibles doble-envíos si hay handlers HTML y JS
   if (input) {
+    input.onkeydown = null;
     input.addEventListener("keydown", function(event) {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -127,10 +140,10 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-
   // Botón enviar
-  const btn = document.getElementById("send-btn");
+  const btn = document.getElementById("send-btn") || btns[0];
   if (btn) {
+    btn.onclick = null;
     btn.addEventListener("click", function(event) {
       event.preventDefault();
       sendMessage();
