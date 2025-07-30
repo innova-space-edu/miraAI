@@ -2,7 +2,7 @@ const API_KEY = "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";
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 // Prompt positivo y didáctico
-const SYSTEM_PROMPT = 
+const SYSTEM_PROMPT = `
 Eres MIRA, una asistente virtual de inteligencia artificial creada por Innova Space. creada para apoyar a estudiantes y profesores en todas las materias escolares. Responde siempre en español, con explicaciones claras, ordenadas y fáciles de entender, adaptando el nivel de detalle según el usuario.
 
 Cuando te pidan una **fórmula, ecuación, función matemática o científica**, sigue estos pasos:
@@ -43,16 +43,11 @@ Cuando expliques las variables o símbolos de la fórmula, **nunca uses LaTeX ni
 - Si alguna variable contiene letras griegas (como Δx o θ), escribe el símbolo directamente, pero SIN LaTeX.
 
 Responde siempre con amabilidad y usando buen ritmo, pausas, y frases bien puntuadas para facilitar la lectura en voz alta.
-;
+`;
 
-// ============ MEJORA PARA LIMPIAR VARIABLES ============= //
 // Quita $...$ solo cuando es variable o símbolo al inicio de la línea (en las listas tipo Donde:)
-// Ejemplo: $v_m$ es la velocidad media -> **v_m** es la velocidad media
 function cleanVariablesLatex(text) {
-  // Detecta línea de variable y reemplaza el $...$ por negrita sin LaTeX
-  // Ejemplo: $\\Delta x$ o $v_m$
   return text.replace(/^(\s*)\$\\?([a-zA-Z_0-9]+|Delta|theta|phi|pi|lambda|mu|sigma|alpha|beta|gamma)\$ ?/gm, (_, s, v) => {
-    // Reemplaza símbolos griegos conocidos:
     v = v.replace("Delta", "Δ")
          .replace("theta", "θ")
          .replace("phi", "φ")
@@ -63,7 +58,7 @@ function cleanVariablesLatex(text) {
          .replace("alpha", "α")
          .replace("beta", "β")
          .replace("gamma", "γ");
-    return s + **${v}** ;
+    return s + `**${v}**`;
   });
 }
 
@@ -92,7 +87,7 @@ function showThinking() {
   const thinking = document.createElement("div");
   thinking.id = "thinking";
   thinking.className = "text-purple-300 italic";
-  thinking.innerHTML = <span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>;
+  thinking.innerHTML = `<span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>`;
   chatBox.appendChild(thinking);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -106,18 +101,16 @@ function plainTextForVoice(markdown) {
       !line.includes('$') && // No fórmulas inline
       !/^ {0,3}/.test(line) // No bloques de código
     )
-    .join('. ') // Une cada línea con punto y espacio para mejorar pausas
+    .join('. ')
     .replace(/\*\*([^*]+)\*\*/g, '$1')  // Quita negritas
     .replace(/\*([^*]+)\*/g, '$1')      // Quita cursivas
     .replace(/__([^_]+)__/g, '$1')
     .replace(/_([^_]+)_/g, '$1')
-    .replace(/([.,;:!?\)])([^\s.])/g, '$1 $2') // Asegura espacio después de puntuación
+    .replace(/([.,;:!?\)])([^\s.])/g, '$1 $2')
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Elimina puntos dobles (por unir dos líneas con punto)
   text = text.replace(/\.{2,}/g, '.');
-  // Elimina punto final extra si está repetido
   text = text.replace(/\. \./g, '. ');
 
   return text;
@@ -177,7 +170,7 @@ async function sendMessage() {
   const userMessage = input.value.trim();
   if (!userMessage) return;
 
-  chatBox.innerHTML += <div><strong>Tú:</strong> ${escapeHtml(userMessage)}</div>;
+  chatBox.innerHTML += `<div><strong>Tú:</strong> ${escapeHtml(userMessage)}</div>`;
   input.value = "";
   showThinking();
 
@@ -193,7 +186,7 @@ async function sendMessage() {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": Bearer ${API_KEY},
+        "Authorization": `Bearer ${API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
@@ -212,14 +205,13 @@ async function sendMessage() {
       aiReply.toLowerCase().includes("no se pudo") ||
       aiReply.toLowerCase().includes("no encontré una respuesta")
     ) {
-      // Preguntas típicas de presentación, incluso con faltas
       if (
         /kien eres|quien eres|kien es mira|quien es mira|k eres|q eres|qué eres|ke eres|q puedes aser|qué puedes hacer|q asés|qué haces|qué asés|ke funcion tienes|qué funcion tienes|de donde vienes|de donde bvienes|presentate|preséntate|que puedes hacer|quien eres tu|quien sos|quien sos vos|quien soy|quien estoy|quien/.test(userMessage.toLowerCase())
       ) {
         aiReply = "Soy MIRA, una asistente virtual creada por Innova Space. Estoy diseñada para ayudarte a aprender y resolver tus dudas de manera clara, amigable y personalizada, en todas las materias escolares. Puedes preguntarme sobre matemáticas, ciencias, historia, tecnología y mucho más.";
       } else {
         // Busca en Wikipedia
-        const wiki = await fetch(https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)});
+        const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
         const wikiData = await wiki.json();
         aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
       }
@@ -234,11 +226,10 @@ async function sendMessage() {
     document.getElementById("thinking")?.remove();
     const html = renderMarkdown(aiReply);
     chatBox.innerHTML += 
-      <div>
+      `<div>
         <strong>MIRA:</strong>
         <span class="chat-markdown">${html}</span>
-      </div>
-    ;
+      </div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
 
     speak(aiReply);
@@ -247,7 +238,7 @@ async function sendMessage() {
 
   } catch (error) {
     document.getElementById("thinking")?.remove();
-    chatBox.innerHTML += <div><strong>MIRA:</strong> Error al conectar con la IA.</div>;
+    chatBox.innerHTML += `<div><strong>MIRA:</strong> Error al conectar con la IA.</div>`;
     setAvatarTalking(false);
     console.error(error);
   }
