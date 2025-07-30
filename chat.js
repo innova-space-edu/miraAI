@@ -46,25 +46,33 @@ Responde siempre con amabilidad y usando buen ritmo, pausas, y frases bien puntu
 `;
 
 // ============ MEJORA PARA LIMPIAR VARIABLES ============= //
-// Quita $...$ solo cuando es variable o símbolo al inicio de la línea (en las listas tipo Donde:)
-// Ejemplo: $v_m$ es la velocidad media -> **v_m** es la velocidad media
+// Quita $...$ solo cuando es variable o símbolo al inicio de la línea (en listas)
 function cleanVariablesLatex(text) {
-  // Detecta línea de variable y reemplaza el $...$ por negrita sin LaTeX
-  // Ejemplo: $\\Delta x$ o $v_m$
-  return text.replace(/^(\s*)\$\\?([a-zA-Z_0-9]+|Delta|theta|phi|pi|lambda|mu|sigma|alpha|beta|gamma)\$ ?/gm, (_, s, v) => {
-    // Reemplaza símbolos griegos conocidos:
-    v = v.replace("Delta", "Δ")
-         .replace("theta", "θ")
-         .replace("phi", "φ")
-         .replace("pi", "π")
-         .replace("lambda", "λ")
-         .replace("mu", "μ")
-         .replace("sigma", "σ")
-         .replace("alpha", "α")
-         .replace("beta", "β")
-         .replace("gamma", "γ");
-    return s + `**${v}** `;
+  return text.replace(/^(\s*[-*]\s+)\$\\?([a-zA-Z_0-9]+|Delta|theta|phi|pi|lambda|mu|sigma|alpha|beta|gamma)\$ ?/gm, (_, prefix, variable) => {
+    variable = variable
+      .replace("Delta", "Δ")
+      .replace("theta", "θ")
+      .replace("phi", "φ")
+      .replace("pi", "π")
+      .replace("lambda", "λ")
+      .replace("mu", "μ")
+      .replace("sigma", "σ")
+      .replace("alpha", "α")
+      .replace("beta", "β")
+      .replace("gamma", "γ");
+    return prefix + `**${variable}** `;
   });
+}
+
+// ========= NUEVA FUNCIÓN PARA FORMATO LATEX CORRECTO ========= //
+function limpiarLatex(texto) {
+  // Fórmulas centradas: reemplaza $$...$$ por \[...\]
+  texto = texto.replace(/\$\$(.*?)\$\$/gs, (_, formula) => `\\[${formula.trim()}\\]`);
+
+  // Fórmulas en línea: reemplaza $...$ por \(...\), evitando dobles
+  texto = texto.replace(/(?<!\$)\$(.+?)\$(?!\$)/g, (_, formula) => `\\(${formula.trim()}\\)`);
+
+  return texto;
 }
 
 // Halo animado solo cuando habla
@@ -102,22 +110,20 @@ function plainTextForVoice(markdown) {
   let text = markdown
     .split('\n')
     .filter(line =>
-      !line.trim().startsWith('$$') && !line.trim().endsWith('$$') && // No fórmulas centradas
-      !line.includes('$') && // No fórmulas inline
-      !/^ {0,3}`/.test(line) // No bloques de código
+      !line.trim().startsWith('$$') && !line.trim().endsWith('$$') &&
+      !line.includes('$') &&
+      !/^ {0,3}`/.test(line)
     )
-    .join('. ') // Une cada línea con punto y espacio para mejorar pausas
-    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Quita negritas
-    .replace(/\*([^*]+)\*/g, '$1')      // Quita cursivas
+    .join('. ')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
     .replace(/__([^_]+)__/g, '$1')
     .replace(/_([^_]+)_/g, '$1')
-    .replace(/([.,;:!?\)])([^\s.])/g, '$1 $2') // Asegura espacio después de puntuación
+    .replace(/([.,;:!?\)])([^\s.])/g, '$1 $2')
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Elimina puntos dobles (por unir dos líneas con punto)
   text = text.replace(/\.{2,}/g, '.');
-  // Elimina punto final extra si está repetido
   text = text.replace(/\. \./g, '. ');
 
   return text;
@@ -163,7 +169,7 @@ const chatHistory = [
   { role: "system", content: SYSTEM_PROMPT }
 ];
 
-// Saludo hablado inicial (al cargar la página)
+// Saludo hablado inicial
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
@@ -181,12 +187,10 @@ async function sendMessage() {
   input.value = "";
   showThinking();
 
-  // Agrega mensaje de usuario al historial
   chatHistory.push({ role: "user", content: userMessage });
 
-  // Mantén solo los últimos 8 mensajes (puedes ajustar)
   if (chatHistory.length > 9) {
-    chatHistory.splice(1, chatHistory.length - 8); // deja system y los últimos 8
+    chatHistory.splice(1, chatHistory.length - 8);
   }
 
   try {
@@ -206,29 +210,25 @@ async function sendMessage() {
     const data = await response.json();
     let aiReply = data.choices?.[0]?.message?.content || "";
 
-    // Si la respuesta es vacía o genérica, busca en Wikipedia
     if (
       !aiReply ||
       aiReply.toLowerCase().includes("no se pudo") ||
       aiReply.toLowerCase().includes("no encontré una respuesta")
     ) {
-      // Preguntas típicas de presentación, incluso con faltas
       if (
         /kien eres|quien eres|kien es mira|quien es mira|k eres|q eres|qué eres|ke eres|q puedes aser|qué puedes hacer|q asés|qué haces|qué asés|ke funcion tienes|qué funcion tienes|de donde vienes|de donde bvienes|presentate|preséntate|que puedes hacer|quien eres tu|quien sos|quien sos vos|quien soy|quien estoy|quien/.test(userMessage.toLowerCase())
       ) {
         aiReply = "Soy MIRA, una asistente virtual creada por Innova Space. Estoy diseñada para ayudarte a aprender y resolver tus dudas de manera clara, amigable y personalizada, en todas las materias escolares. Puedes preguntarme sobre matemáticas, ciencias, historia, tecnología y mucho más.";
       } else {
-        // Busca en Wikipedia
         const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
         const wikiData = await wiki.json();
         aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
       }
     }
 
-    // ========== LIMPIA VARIABLES $...$ ANTES DE MOSTRAR ==========
-    aiReply = cleanVariablesLatex(aiReply);
+    // LIMPIEZA COMPLETA DE LATEX Y VARIABLES
+    aiReply = limpiarLatex(cleanVariablesLatex(aiReply));
 
-    // Agrega respuesta al historial para mantener el hilo
     chatHistory.push({ role: "assistant", content: aiReply });
 
     document.getElementById("thinking")?.remove();
