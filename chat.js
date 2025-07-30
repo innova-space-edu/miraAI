@@ -163,18 +163,14 @@ async function sendMessage() {
     document.getElementById("thinking")?.remove();
     let aiReply = data.choices?.[0]?.message?.content || "";
 
-    // --- Cambios aquí para responder siempre quién es MIRA ---
+    // Responde siempre la IA, jamás Wikipedia ni mensaje genérico
     if (!aiReply || aiReply.toLowerCase().includes("no se pudo")) {
       if (esPreguntaIdentidad(userMessage)) {
         aiReply = "Soy MIRA, una asistente virtual creada por Innova Space para ayudarte en todo lo que necesites: responder dudas, explicar conceptos y acompañarte en tu aprendizaje.";
       } else {
-        // Consulta Wikipedia solo si es necesario
-        const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
-        const wikiData = await wiki.json();
-        aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
+        aiReply = "No encontré una respuesta clara, pero si quieres, puedo intentar explicarlo de otra manera o buscar juntos una alternativa.";
       }
     }
-    // ----------------------------------------------------------
 
     const html = renderMarkdown(aiReply);
     chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
