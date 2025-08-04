@@ -1,6 +1,3 @@
-const API_KEY = "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";
-const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
-
 // Halo animado
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
@@ -116,20 +113,13 @@ async function sendMessage() {
   showThinking();
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    // Ahora consulta tu backend seguro en Render
+    const response = await fetch("https://miraai-1.onrender.com/api/chat", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${API_KEY}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userMessage }
-        ],
-        temperature: 0.7
-      })
+      body: JSON.stringify({ userMessage })
     });
 
     const data = await response.json();
