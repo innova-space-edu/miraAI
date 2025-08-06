@@ -20,23 +20,19 @@ function showThinking() {
   const thinking = document.createElement("div");
   thinking.id = "thinking";
   thinking.className = "text-purple-300 italic";
-  thinking.innerHTML = <span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>;
+  thinking.innerHTML = `<span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>`;
   chatBox.appendChild(thinking);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 // Quitar negritas/cursivas y bloques LaTeX: voz limpia
 function plainTextForVoice(markdown) {
-  // Quitar todas las negritas/cursivas Markdown
   let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1'); // **negrita**
   text = text.replace(/\*([^*]+)\*/g, '$1');             // *cursiva*
   text = text.replace(/__([^_]+)__/g, '$1');             // __negrita__
   text = text.replace(/_([^_]+)_/g, '$1');               // _cursiva_
-  // Elimina todos los bloques $$...$$ (fórmulas centradas)
-  text = text.replace(/\$\$[\s\S]*?\$\$/g, ' ');
-  // Elimina todos los bloques $...$ (en línea)
-  text = text.replace(/\$[^$]*\$/g, ' ');
-  // Limpia exceso de espacios
+  text = text.replace(/\$\$[\s\S]*?\$\$/g, ' ');         // $$...$$ (centradas)
+  text = text.replace(/\$[^$]*\$/g, ' ');                // $...$ (en línea)
   text = text.replace(/\s+/g, ' ').trim();
   return text;
 }
@@ -63,19 +59,43 @@ function renderMarkdown(text) {
   return marked.parse(text);
 }
 
-// PROMPT mejorado: explicación previa, luego fórmula bonita
-const SYSTEM_PROMPT = 
+// Limpia $...$ en listas de variables y reemplaza letras griegas
+function cleanVariablesLatex(text) {
+  return text.replace(
+    /^(\s*[-*]\s+)\$\\?([a-zA-Z_0-9]+|Delta|theta|phi|pi|lambda|mu|sigma|alpha|beta|gamma)\$ ?/gm,
+    (_, prefix, variable) => {
+      variable = variable
+        .replace("Delta", "Δ")
+        .replace("theta", "θ")
+        .replace("phi", "φ")
+        .replace("pi", "π")
+        .replace("lambda", "λ")
+        .replace("mu", "μ")
+        .replace("sigma", "σ")
+        .replace("alpha", "α")
+        .replace("beta", "β")
+        .replace("gamma", "γ");
+      return prefix + `**${variable}** `;
+    }
+  );
+}
+
+// PROMPT como variable JS (¡ojo, entre ``!)
+const SYSTEM_PROMPT = `
 Eres MIRA, una asistente virtual de inteligencia artificial (Modular Intelligent Responsive Assistant). Creada por Innova Space Edu (Chile) con tecnología OpenAI y Groq.
-Cuando te pidan una **fórmula, ecuación, función matemática o científica**, sigue estos pasos:
 
-1. **Explica primero con palabras sencillas** el concepto o significado antes de mostrar la fórmula.
-2. **Luego muestra la fórmula en LaTeX** (usando signos de dólar: \$...\$ para fórmulas en línea o \$\$...\$\$ para fórmulas centradas).
-3. **Después de la fórmula, explica cada variable o símbolo en texto plano (NO uses LaTeX ni signos de dólar, solo texto normal o Markdown)**. Escribe, por ejemplo: - **vm** es la velocidad media, - **Δx** es el cambio en la posición, - **Δt** es el intervalo de tiempo.
-4. **Ofrece un ejemplo práctico o aplicación si corresponde**.
+Cuando te pidan una fórmula, ecuación, función matemática o científica, sigue estos pasos:
 
-**Ejemplo de estructura ideal:**
+1. Explica primero con palabras sencillas el concepto o significado antes de mostrar la fórmula.
+2. Luego muestra la fórmula en LaTeX (usando signos de dólar: \$...\$ para fórmulas en línea o \$\$...\$\$ para fórmulas centradas).
+3. Después de la fórmula, explica cada variable o símbolo en texto plano (sin LaTeX ni signos de dólar, solo texto normal o Markdown). Escribe, por ejemplo:
+   - **v_m** es la velocidad media
+   - **Δx** es el cambio en la posición
+   - **Δt** es el intervalo de tiempo
+4. Ofrece un ejemplo práctico o aplicación si corresponde.
 
----
+Ejemplo de estructura ideal:
+
 La velocidad media es la variación de la posición dividida por la variación del tiempo.
 
 La fórmula es:
@@ -84,27 +104,25 @@ v_m = \\frac{\\Delta x}{\\Delta t}
 $$
 
 Donde:
-- **vm** es la velocidad media
+- **v_m** es la velocidad media
 - **Δx** es el cambio en la posición
 - **Δt** es el intervalo de tiempo
 
 ¿Quieres un ejemplo de cómo aplicar esta fórmula?
----
 
-**Regla importante**:  
-Cuando expliques las variables o símbolos de la fórmula, **nunca uses LaTeX ni signos de dólar ($)**. Solo texto plano, negrita o cursiva si lo deseas.
+Regla importante:
+Cuando expliques las variables o símbolos de la fórmula, nunca uses LaTeX ni signos de dólar (\$). Solo texto plano, negrita o cursiva si lo deseas.
 
-**Otras instrucciones importantes:**
+Otras instrucciones importantes:
 - Si hay un error ortográfico o la pregunta no está clara, intenta interpretarla y responde de la mejor manera posible.
 - Si la pregunta es ambigua, pide aclaración de forma breve y amable.
 - Usa títulos, listas, negrita (Markdown), y estructura visualmente agradable.
 - Si la respuesta es extensa, puedes ofrecer un resumen al final.
 - Si te preguntan varias veces sobre el mismo tema, mantén el contexto y responde como una conversación.
-- Si alguna variable contiene letras griegas (como Δx o θ), escribe el símbolo directamente, pero SIN LaTeX.
+- Si alguna variable contiene letras griegas (como Δx o θ), escribe el símbolo directamente, pero sin LaTeX.
 
 Responde siempre con amabilidad y usando buen ritmo, pausas, y frases bien puntuadas para facilitar la lectura en voz alta.
 `;
-
 
 // Autosaludo inicial
 window.addEventListener('DOMContentLoaded', () => {
@@ -121,7 +139,7 @@ async function sendMessage() {
   const userMessage = input.value.trim();
   if (!userMessage) return;
 
-  chatBox.innerHTML += <div><strong>Tú:</strong> ${userMessage}</div>;
+  chatBox.innerHTML += `<div><strong>Tú:</strong> ${userMessage}</div>`;
   input.value = "";
   showThinking();
 
@@ -141,13 +159,16 @@ async function sendMessage() {
 
     if (!aiReply || aiReply.toLowerCase().includes("no se pudo")) {
       // Consulta Wikipedia solo si es necesario
-      const wiki = await fetch(https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)});
+      const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
       const wikiData = await wiki.json();
       aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
     }
 
-    const html = renderMarkdown(aiReply);
-    chatBox.innerHTML += <div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>;
+    // Limpia variables LaTeX en listas de definición
+    const cleanedReply = cleanVariablesLatex(aiReply);
+
+    const html = renderMarkdown(cleanedReply);
+    chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
 
     // Voz + halo animado SOLO para el texto limpio
@@ -158,7 +179,7 @@ async function sendMessage() {
 
   } catch (error) {
     document.getElementById("thinking")?.remove();
-    chatBox.innerHTML += <div><strong>MIRA:</strong> Error al conectar con la IA.</div>;
+    chatBox.innerHTML += `<div><strong>MIRA:</strong> Error al conectar con la IA.</div>`;
     setAvatarTalking(false);
     console.error(error);
   }
