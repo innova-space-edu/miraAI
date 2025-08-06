@@ -86,7 +86,6 @@ Eres MIRA, Modular Intelligent Responsive Assistant (Asistente Modular, Intelige
 - Presenta la información de manera positiva y constructiva, utilizando frases completas y bien puntuadas. Organiza la información con listas, tablas y títulos para facilitar la comprensión.
 `;
 
-
 // Autosaludo inicial
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
@@ -94,6 +93,18 @@ window.addEventListener('DOMContentLoaded', () => {
     setAvatarTalking(false);
   }, 900);
 });
+
+// Nueva función para agregar mensajes de la IA, renderizando Markdown y MathJax
+function addAssistantMessage(markdownText) {
+  const chatBox = document.getElementById('chat-box');
+  const html = `<div><strong>MIRA:</strong> <span class="chat-markdown">${renderMarkdown(markdownText)}</span></div>`;
+  chatBox.insertAdjacentHTML('beforeend', html);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  // Procesa LaTeX con MathJax
+  if (window.MathJax) setTimeout(() => MathJax.typesetPromise(), 60);
+  // Voz y animación
+  speak(markdownText);
+}
 
 async function sendMessage() {
   const input = document.getElementById("user-input");
@@ -127,15 +138,7 @@ async function sendMessage() {
       aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
     }
 
-    const html = renderMarkdown(aiReply);
-    chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    // Voz + halo animado SOLO para el texto limpio
-    speak(aiReply);
-
-    // Re-renderizar MathJax para fórmulas
-    if (window.MathJax) MathJax.typesetPromise();
+    addAssistantMessage(aiReply);
 
   } catch (error) {
     document.getElementById("thinking")?.remove();
