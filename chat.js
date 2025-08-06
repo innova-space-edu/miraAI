@@ -20,7 +20,7 @@ function showThinking() {
   const thinking = document.createElement("div");
   thinking.id = "thinking";
   thinking.className = "text-purple-300 italic";
-  thinking.innerHTML = `<span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>`;
+  thinking.innerHTML = <span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>;
   chatBox.appendChild(thinking);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -64,7 +64,7 @@ function renderMarkdown(text) {
 }
 
 // PROMPT mejorado: explicación previa, luego fórmula bonita
-const SYSTEM_PROMPT = `
+const SYSTEM_PROMPT = 
 Eres MIRA, una asistente virtual de inteligencia artificial (Modular Intelligent Responsive Assistant). Creada por Innova Space Edu (Chile) con tecnología OpenAI y Groq.
 Cuando te pidan una **fórmula, ecuación, función matemática o científica**, sigue estos pasos:
 
@@ -114,18 +114,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 900);
 });
 
-// Nueva función para agregar mensajes de la IA, renderizando Markdown y MathJax
-function addAssistantMessage(markdownText) {
-  const chatBox = document.getElementById('chat-box');
-  const html = `<div><strong>MIRA:</strong> <span class="chat-markdown">${renderMarkdown(markdownText)}</span></div>`;
-  chatBox.insertAdjacentHTML('beforeend', html);
-  chatBox.scrollTop = chatBox.scrollHeight;
-  // Procesa LaTeX con MathJax
-  if (window.MathJax) setTimeout(() => MathJax.typesetPromise(), 60);
-  // Voz y animación
-  speak(markdownText);
-}
-
 async function sendMessage() {
   const input = document.getElementById("user-input");
   const chatBox = document.getElementById("chat-box");
@@ -133,7 +121,7 @@ async function sendMessage() {
   const userMessage = input.value.trim();
   if (!userMessage) return;
 
-  chatBox.innerHTML += `<div><strong>Tú:</strong> ${userMessage}</div>`;
+  chatBox.innerHTML += <div><strong>Tú:</strong> ${userMessage}</div>;
   input.value = "";
   showThinking();
 
@@ -153,16 +141,24 @@ async function sendMessage() {
 
     if (!aiReply || aiReply.toLowerCase().includes("no se pudo")) {
       // Consulta Wikipedia solo si es necesario
-      const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
+      const wiki = await fetch(https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)});
       const wikiData = await wiki.json();
       aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
     }
 
-    addAssistantMessage(aiReply);
+    const html = renderMarkdown(aiReply);
+    chatBox.innerHTML += <div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>;
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Voz + halo animado SOLO para el texto limpio
+    speak(aiReply);
+
+    // Re-renderizar MathJax para fórmulas
+    if (window.MathJax) MathJax.typesetPromise();
 
   } catch (error) {
     document.getElementById("thinking")?.remove();
-    chatBox.innerHTML += `<div><strong>MIRA:</strong> Error al conectar con la IA.</div>`;
+    chatBox.innerHTML += <div><strong>MIRA:</strong> Error al conectar con la IA.</div>;
     setAvatarTalking(false);
     console.error(error);
   }
