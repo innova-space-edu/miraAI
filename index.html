@@ -228,5 +228,29 @@
     }
   </script>
   <script src="chat.js"></script>
+
+  <!-- INTEGRACIÓN LaTeX + Markdown para el chat -->
+  <script>
+    // Sobreescribe función para mostrar mensajes de la IA con Markdown + MathJax
+    function addAssistantMessage(text) {
+      const chatBox = document.getElementById('chat-box');
+      // Convierte Markdown a HTML (tablas, listas, negritas, etc)
+      const html = `<div class="assistant-msg">${marked.parse(text)}</div>`;
+      chatBox.insertAdjacentHTML('beforeend', html);
+      // Desplaza el chat al final
+      chatBox.scrollTop = chatBox.scrollHeight;
+      // Procesa LaTeX con MathJax
+      if (window.MathJax) {
+        setTimeout(() => MathJax.typesetPromise(), 60);
+      }
+    }
+
+    // Ejemplo de uso (puedes borrar estas líneas, solo son demo):
+    // setTimeout(() => {
+    //   addAssistantMessage("La fórmula cuadrática es:\n$$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$\nDonde:\n- **x**: solución\n- **a, b, c**: coeficientes");
+    // }, 3000);
+
+    // Cuando tu flujo reciba la respuesta de MIRA, llama: addAssistantMessage(respuesta);
+  </script>
 </body>
 </html>
