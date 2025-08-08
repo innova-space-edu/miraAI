@@ -1,3 +1,6 @@
+const API_KEY = "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";
+const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+
 // Halo animado
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
@@ -27,12 +30,16 @@ function showThinking() {
 
 // Quitar negritas/cursivas y bloques LaTeX: voz limpia
 function plainTextForVoice(markdown) {
+  // Quitar todas las negritas/cursivas Markdown
   let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1'); // **negrita**
   text = text.replace(/\*([^*]+)\*/g, '$1');             // *cursiva*
   text = text.replace(/__([^_]+)__/g, '$1');             // __negrita__
   text = text.replace(/_([^_]+)_/g, '$1');               // _cursiva_
-  text = text.replace(/\$\$[\s\S]*?\$\$/g, ' ');         // $$...$$ (centradas)
-  text = text.replace(/\$[^$]*\$/g, ' ');                // $...$ (en línea)
+  // Elimina todos los bloques $$...$$ (fórmulas centradas)
+  text = text.replace(/\$\$[\s\S]*?\$\$/g, ' ');
+  // Elimina todos los bloques $...$ (en línea)
+  text = text.replace(/\$[^$]*\$/g, ' ');
+  // Limpia exceso de espacios
   text = text.replace(/\s+/g, ' ').trim();
   return text;
 }
@@ -59,69 +66,34 @@ function renderMarkdown(text) {
   return marked.parse(text);
 }
 
-// Limpia $...$ en listas de variables y reemplaza letras griegas
-function cleanVariablesLatex(text) {
-  return text.replace(
-    /^(\s*[-*]\s+)\$\\?([a-zA-Z_0-9]+|Delta|theta|phi|pi|lambda|mu|sigma|alpha|beta|gamma)\$ ?/gm,
-    (_, prefix, variable) => {
-      variable = variable
-        .replace("Delta", "Δ")
-        .replace("theta", "θ")
-        .replace("phi", "φ")
-        .replace("pi", "π")
-        .replace("lambda", "λ")
-        .replace("mu", "μ")
-        .replace("sigma", "σ")
-        .replace("alpha", "α")
-        .replace("beta", "β")
-        .replace("gamma", "γ");
-      return prefix + `**${variable}** `;
-    }
-  );
-}
-
-// PROMPT como variable JS (¡ojo, entre ``!)
+// PROMPT mejorado: explicación previa, luego fórmula bonita
 const SYSTEM_PROMPT = `
-Eres MIRA, una asistente virtual de inteligencia artificial (Modular Intelligent Responsive Assistant). Creada por Innova Space Edu (Chile) con tecnología Open AI y Groq.
+Tu eres MIRA, Modular Intelligent Responsive Assistant. En español: Asistente Modular, Inteligente y Reactivo. Creada por Innova Space y OpenAi.
+Responde SIEMPRE con estructura ordenada y clara, como ChatGPT.
 
-Cuando te pidan una fórmula, ecuación, función matemática o científica, sigue estos pasos:
+Si el usuario escribe palabras incompletas, con errores ortográficos, abreviaturas o frases poco claras, intenta corregir o interpretar automáticamente el mensaje para dar la mejor respuesta posible usando el contexto. Si no es completamente claro, ofrece alternativas breves (por ejemplo: "¿Quizás quisiste decir...?" o "¿Te refieres a...?") y pide aclaración solo si ninguna alternativa es adecuada.
 
-1. Explica primero con palabras sencillas el concepto o significado antes de mostrar la fórmula.
-2. Luego muestra la fórmula en LaTeX (usando signos de dólar: \$...\$ para fórmulas en línea o \$\$...\$\$ para fórmulas centradas).
-3. Después de la fórmula, explica cada variable o símbolo en texto plano (sin LaTeX ni signos de dólar, solo texto normal o Markdown). Escribe, por ejemplo:
-   - **v_m** es la velocidad media
-   - **Δx** es el cambio en la posición
-   - **Δt** es el intervalo de tiempo
-4. Ofrece un ejemplo práctico o aplicación si corresponde.
+Cuando debas mostrar fórmulas, ecuaciones, funciones, expresiones algebraicas, matrices o símbolos matemáticos, primero escribe una frase explicando su significado con palabras simples y comprensibles para estudiantes (por ejemplo: "La velocidad media es igual al desplazamiento dividido por el intervalo de tiempo."). Después, incluye la ecuación en LaTeX usando los signos de dólar ($ para ecuaciones en línea, $$ para centradas), para que se vea como fórmula, pero NO expliques el código ni los signos de dólar.
 
-Ejemplo de estructura ideal:
-
-La velocidad media es la variación de la posición dividida por la variación del tiempo.
-
-La fórmula es:
+Ejemplo de formato ideal:
+"La velocidad media es igual al desplazamiento dividido por el intervalo de tiempo:
 $$
 v_m = \\frac{\\Delta x}{\\Delta t}
 $$
-
 Donde:
-- **v_m** es la velocidad media
-- **Δx** es el cambio en la posición
-- **Δt** es el intervalo de tiempo
+- **v_m** es la velocidad media.
+- **Δx** es el desplazamiento total.
+- **Δt** es el intervalo de tiempo."
 
-¿Quieres un ejemplo de cómo aplicar esta fórmula?
+NO uses LaTeX ni signos de dólar para variables, letras ni números sueltos en listas de definición: escribe la variable como texto normal o en negrita/cursiva usando Markdown.
 
-Regla importante:
-Cuando expliques las variables o símbolos de la fórmula, nunca uses LaTeX ni signos de dólar (\$). Solo texto plano, negrita o cursiva si lo deseas.
+Utiliza frases completas, claras y bien puntuadas (usa puntos, comas y saltos de línea para pausas naturales y buena lectura en voz alta).
 
-Otras instrucciones importantes:
-- Si hay un error ortográfico o la pregunta no está clara, intenta interpretarla y responde de la mejor manera posible.
-- Si la pregunta es ambigua, pide aclaración de forma breve y amable.
-- Usa títulos, listas, negrita (Markdown), y estructura visualmente agradable.
-- Si la respuesta es extensa, puedes ofrecer un resumen al final.
-- Si te preguntan varias veces sobre el mismo tema, mantén el contexto y responde como una conversación.
-- Si alguna variable contiene letras griegas (como Δx o θ), escribe el símbolo directamente, pero sin LaTeX.
+No uses bloques de código ni asteriscos a menos que el usuario lo pida explícitamente.
 
-Responde siempre con amabilidad y usando buen ritmo, pausas, y frases bien puntuadas para facilitar la lectura en voz alta.
+Utiliza listas, tablas y títulos para organizar la información. Resume si es posible.
+
+Si no sabes la respuesta, consulta Wikipedia.
 `;
 
 // Autosaludo inicial
@@ -144,13 +116,20 @@ async function sendMessage() {
   showThinking();
 
   try {
-    // Ahora consulta tu backend seguro en Render
-    const response = await fetch("https://miraai-1.onrender.com/api/chat", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
+        "Authorization": `Bearer ${API_KEY}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ userMessage })
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userMessage }
+        ],
+        temperature: 0.7
+      })
     });
 
     const data = await response.json();
@@ -164,10 +143,7 @@ async function sendMessage() {
       aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
     }
 
-    // Limpia variables LaTeX en listas de definición
-    const cleanedReply = cleanVariablesLatex(aiReply);
-
-    const html = renderMarkdown(cleanedReply);
+    const html = renderMarkdown(aiReply);
     chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
 
