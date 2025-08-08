@@ -82,7 +82,7 @@ function cleanVariablesLatex(text) {
 
 // PROMPT como variable JS (¡ojo, entre ``!)
 const SYSTEM_PROMPT = `
-Eres MIRA, una asistente virtual de inteligencia artificial (Modular Intelligent Responsive Assistant). Creada por Innova Space Edu (Chile) con tecnología OpenAI y Groq.
+Eres MIRA, una asistente virtual de inteligencia artificial (Modular Intelligent Responsive Assistant). Creada por Innova Space Edu (Chile) con tecnología Open AI y Groq.
 
 Cuando te pidan una fórmula, ecuación, función matemática o científica, sigue estos pasos:
 
