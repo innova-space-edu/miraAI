@@ -1,4 +1,4 @@
-const API_KEY = "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";
+const API_KEY = "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";
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 // Halo animado
