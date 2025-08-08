@@ -1,7 +1,9 @@
-const API_KEY = "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";
-const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+// ===============================
+// Chat MIRA - Frontend completo
+// (con fallback Wikipedia inteligente + contexto corto de seguimiento)
+// ===============================
 
-// Halo animado
+// ----- Halo animado -----
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
   if (!avatar) return;
@@ -9,7 +11,7 @@ function setAvatarTalking(isTalking) {
   avatar.classList.toggle("still", !isTalking);
 }
 
-// Enter para enviar
+// ----- Enter para enviar -----
 document.getElementById("user-input").addEventListener("keydown", function(event) {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -17,7 +19,7 @@ document.getElementById("user-input").addEventListener("keydown", function(event
   }
 });
 
-// Indicador de carga
+// ----- Indicador de carga -----
 function showThinking() {
   const chatBox = document.getElementById("chat-box");
   const thinking = document.createElement("div");
@@ -28,23 +30,21 @@ function showThinking() {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Quitar negritas/cursivas y bloques LaTeX: voz limpia
+// ----- Quitar negritas/cursivas y bloques LaTeX: voz limpia -----
 function plainTextForVoice(markdown) {
-  // Quitar todas las negritas/cursivas Markdown
   let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1'); // **negrita**
   text = text.replace(/\*([^*]+)\*/g, '$1');             // *cursiva*
   text = text.replace(/__([^_]+)__/g, '$1');             // __negrita__
   text = text.replace(/_([^_]+)_/g, '$1');               // _cursiva_
-  // Elimina todos los bloques $$...$$ (fórmulas centradas)
-  text = text.replace(/\$\$[\s\S]*?\$\$/g, ' ');
-  // Elimina todos los bloques $...$ (en línea)
-  text = text.replace(/\$[^$]*\$/g, ' ');
-  // Limpia exceso de espacios
+  text = text.replace(/\$\$[\s\S]*?\$\$/g, ' ');         // $$...$$
+  text = text.replace(/\$[^$]*\$/g, ' ');                // $...$
+  text = text.replace(/```[\s\S]*?```/g, ' ');           // bloques de código
+  text = text.replace(/`[^`]*`/g, ' ');                  // código inline
   text = text.replace(/\s+/g, ' ').trim();
   return text;
 }
 
-// Voz y halo solo en texto limpio
+// ----- Voz y halo solo en texto limpio -----
 function speak(text) {
   try {
     const plain = plainTextForVoice(text);
@@ -61,42 +61,163 @@ function speak(text) {
   }
 }
 
-// Render Markdown y MathJax
+// ----- Render Markdown y MathJax -----
 function renderMarkdown(text) {
   return marked.parse(text);
 }
 
-// PROMPT mejorado: explicación previa, luego fórmula bonita
+// ----- Limpia $...$ en listas de variables y reemplaza letras griegas -----
+function cleanVariablesLatex(text) {
+  return text.replace(
+    /^(\s*[-*]\s+)\$\\?([a-zA-Z_0-9]+|Delta|theta|phi|pi|lambda|mu|sigma|alpha|beta|gamma)\$ ?/gm,
+    (_, prefix, variable) => {
+      variable = variable
+        .replace("Delta", "Δ")
+        .replace("theta", "θ")
+        .replace("phi", "φ")
+        .replace("pi", "π")
+        .replace("lambda", "λ")
+        .replace("mu", "μ")
+        .replace("sigma", "σ")
+        .replace("alpha", "α")
+        .replace("beta", "β")
+        .replace("gamma", "γ");
+      return prefix + `**${variable}** `;
+    }
+  );
+}
+
+// ----- PROMPT como variable JS (no se envía al backend) -----
 const SYSTEM_PROMPT = `
-Tu eres MIRA, Modular Intelligent Responsive Assistant. En español: Asistente Modular, Inteligente y Reactivo. Creada por Innova Space y OpenAi.
-Responde SIEMPRE con estructura ordenada y clara, como ChatGPT.
+Eres MIRA, una asistente virtual de inteligencia artificial (Modular Intelligent Responsive Assistant). Creada por Innova Space Edu (Chile) con tecnología Open AI y Groq.
 
-Si el usuario escribe palabras incompletas, con errores ortográficos, abreviaturas o frases poco claras, intenta corregir o interpretar automáticamente el mensaje para dar la mejor respuesta posible usando el contexto. Si no es completamente claro, ofrece alternativas breves (por ejemplo: "¿Quizás quisiste decir...?" o "¿Te refieres a...?") y pide aclaración solo si ninguna alternativa es adecuada.
+Cuando te pidan una fórmula, ecuación, función matemática o científica, sigue estos pasos:
 
-Cuando debas mostrar fórmulas, ecuaciones, funciones, expresiones algebraicas, matrices o símbolos matemáticos, primero escribe una frase explicando su significado con palabras simples y comprensibles para estudiantes (por ejemplo: "La velocidad media es igual al desplazamiento dividido por el intervalo de tiempo."). Después, incluye la ecuación en LaTeX usando los signos de dólar ($ para ecuaciones en línea, $$ para centradas), para que se vea como fórmula, pero NO expliques el código ni los signos de dólar.
+1. Explica primero con palabras sencillas el concepto o significado antes de mostrar la fórmula.
+2. Luego muestra la fórmula en LaTeX (usando signos de dólar: $... para fórmulas en línea o $$...$$ para fórmulas centradas).
+3. Después de la fórmula, explica cada variable o símbolo en texto plano (sin LaTeX ni signos de dólar, solo texto normal o Markdown). Escribe, por ejemplo:
+   - **v_m** es la velocidad media
+   - **Δx** es el cambio en la posición
+   - **Δt** es el intervalo de tiempo
+4. Ofrece un ejemplo práctico o aplicación si corresponde.
 
-Ejemplo de formato ideal:
-"La velocidad media es igual al desplazamiento dividido por el intervalo de tiempo:
+Ejemplo de estructura ideal:
+
+La velocidad media es la variación de la posición dividida por la variación del tiempo.
+
+La fórmula es:
 $$
 v_m = \\frac{\\Delta x}{\\Delta t}
 $$
+
 Donde:
-- **v_m** es la velocidad media.
-- **Δx** es el desplazamiento total.
-- **Δt** es el intervalo de tiempo."
+- **v_m** es la velocidad media
+- **Δx** es el cambio en la posición
+- **Δt** es el intervalo de tiempo
 
-NO uses LaTeX ni signos de dólar para variables, letras ni números sueltos en listas de definición: escribe la variable como texto normal o en negrita/cursiva usando Markdown.
+¿Quieres un ejemplo de cómo aplicar esta fórmula?
 
-Utiliza frases completas, claras y bien puntuadas (usa puntos, comas y saltos de línea para pausas naturales y buena lectura en voz alta).
+Regla importante:
+Cuando expliques las variables o símbolos de la fórmula, nunca uses LaTeX ni signos de dólar ($). Solo texto plano, negrita o cursiva si lo deseas.
 
-No uses bloques de código ni asteriscos a menos que el usuario lo pida explícitamente.
+Otras instrucciones importantes:
+- Si hay un error ortográfico o la pregunta no está clara, intenta interpretarla y responde de la mejor manera posible.
+- Si la pregunta es ambigua, pide aclaración de forma breve y amable.
+- Usa títulos, listas, negrita (Markdown), y estructura visualmente agradable.
+- Si la respuesta es extensa, puedes ofrecer un resumen al final.
+- Si te preguntan varias veces sobre el mismo tema, mantén el contexto y responde como una conversación.
+- Si alguna variable contiene letras griegas (como Δx o θ), escribe el símbolo directamente, pero sin LaTeX.
 
-Utiliza listas, tablas y títulos para organizar la información. Resume si es posible.
-
-Si no sabes la respuesta, consulta Wikipedia.
+Responde siempre con amabilidad y usando buen ritmo, pausas, y frases bien puntuadas para facilitar la lectura en voz alta.
 `;
 
+// ===============================
+// Mejoras nuevas
+// ===============================
+
+// Contexto corto para seguimientos tipo “más largo”, “otro ejemplo”, etc.
+let lastTopic = null;
+
+function isFollowup(message) {
+  const t = message.toLowerCase().trim();
+  return (
+    t === "otro" || t.includes("otro ejemplo") || t.includes("más largo") ||
+    t.includes("un poco más") || t.includes("continúa") || t.includes("sigue") ||
+    t.startsWith("y ") || t === "y" || t.includes("amplía") || t.includes("ampliar")
+  );
+}
+
+function isIdentityQuestion(q) {
+  const t = q.toLowerCase().trim();
+  return (
+    t.includes("quien eres") || t.includes("quién eres") ||
+    t.includes("dime quien eres") || t.includes("dime quién eres") ||
+    t.includes("qué eres") || t.includes("quien es mira") || t.includes("quién es mira")
+  );
+}
+
+// Wikipedia: primero buscar título, luego summary; fallback ES→EN
+async function fetchWikipediaSummarySmart(query, lang = "es", abortSignal = undefined) {
+  const searchUrl = `https://${lang}.wikipedia.org/w/rest.php/v1/search/title?q=${encodeURIComponent(query)}&limit=1`;
+  const s = await fetch(searchUrl, { signal: abortSignal });
+  if (!s.ok) {
+    if (lang === "es") return fetchWikipediaSummarySmart(query, "en", abortSignal);
+    return null;
+  }
+  const data = await s.json();
+  const pages = data?.pages || [];
+  if (!pages.length) {
+    if (lang === "es") return fetchWikipediaSummarySmart(query, "en", abortSignal);
+    return null;
+  }
+  const title = pages[0].title;
+
+  const summaryUrl = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+  const r = await fetch(summaryUrl, { signal: abortSignal });
+  if (!r.ok) {
+    if (lang === "es") {
+      const r2 = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`, { signal: abortSignal });
+      if (!r2.ok) return null;
+      return await r2.json();
+    }
+    return null;
+  }
+  return await r.json();
+}
+
+async function fallbackAnswer(query, abortSignal = undefined) {
+  if (isIdentityQuestion(query)) {
+    return "Soy MIRA, tu asistente virtual creada junto a Esthefano. Puedo ayudarte a buscar información, explicar contenidos, abrir apps, controlar tu PC y más. ¿Qué necesitas ahora?";
+  }
+  // Evitar llamar Wikipedia si el prompt es demasiado corto/ambiguo
+  const trimmed = (query || "").trim();
+  if (trimmed.length < 3 || ["ok", "ya", "vale", "y", "mmm"].includes(trimmed.toLowerCase())) {
+    return "¿Puedes darme un poco más de contexto para ayudarte mejor?";
+  }
+
+  try {
+    const summary = await fetchWikipediaSummarySmart(trimmed, "es", abortSignal);
+    if (summary && (summary.extract || summary.description)) {
+      const title = summary.title || "Wikipedia";
+      const extract = summary.extract || summary.description || "";
+      return `Según Wikipedia sobre **${title}**:\n\n${extract}`;
+    }
+  } catch (e) {
+    console.warn("Wikipedia fallback error:", e);
+  }
+
+  return "No encontré una respuesta directa. ¿Quieres que lo busque en Google o que lo explique con más contexto?";
+}
+
+// Utilidad: scroll suave al final
+function scrollChatToBottom() {
+  const chatBox = document.getElementById("chat-box");
+  chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: "smooth" });
+}
+
+// ===============================
 // Autosaludo inicial
+// ===============================
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
@@ -104,60 +225,96 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 900);
 });
 
+// ===============================
+// Envío de mensaje
+// ===============================
 async function sendMessage() {
   const input = document.getElementById("user-input");
   const chatBox = document.getElementById("chat-box");
 
-  const userMessage = input.value.trim();
+  let userMessage = input.value.trim();
   if (!userMessage) return;
 
+  // Render usuario
   chatBox.innerHTML += `<div><strong>Tú:</strong> ${userMessage}</div>`;
   input.value = "";
   showThinking();
+  scrollChatToBottom();
+
+  // Si el usuario hace seguimiento corto, combinar con el último tema
+  let effectiveMessage = userMessage;
+  if (isFollowup(userMessage) && lastTopic) {
+    effectiveMessage = `${lastTopic}. Ampliar: ${userMessage}`;
+  } else if (userMessage.length > 12) {
+    // si el mensaje actual es suficientemente informativo, lo marcamos como nuevo tema
+    lastTopic = userMessage;
+  }
+
+  // Timeout para fetch (evitar que quede colgado)
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000); // 15s
+  let aiReply = "";
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    // Llamada a tu backend seguro
+    const response = await fetch("https://miraai-1.onrender.com/api/chat", {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userMessage }
-        ],
-        temperature: 0.7
-      })
+        userMessage: effectiveMessage,
+        // NO enviamos SYSTEM_PROMPT aquí para no exponerlo.
+        // Si quieres usarlo, configúralo en el servidor.
+      }),
+      signal: controller.signal
     });
 
-    const data = await response.json();
+    clearTimeout(timeout);
     document.getElementById("thinking")?.remove();
-    let aiReply = data.choices?.[0]?.message?.content || "";
 
-    if (!aiReply || aiReply.toLowerCase().includes("no se pudo")) {
-      // Consulta Wikipedia solo si es necesario
-      const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
-      const wikiData = await wiki.json();
-      aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
+    // Validar respuesta del backend
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      // Si el backend devolvió texto plano o HTML
+      data = {};
     }
 
-    const html = renderMarkdown(aiReply);
-    chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
-    chatBox.scrollTop = chatBox.scrollHeight;
+    aiReply = data?.choices?.[0]?.message?.content || data?.content || "";
 
-    // Voz + halo animado SOLO para el texto limpio
+    // Fallback si no hay respuesta útil
+    if (!aiReply || aiReply.toLowerCase().includes("no se pudo")) {
+      // Wikipedia inteligente (search -> summary)
+      aiReply = await fallbackAnswer(userMessage, controller.signal);
+    }
+
+    // Limpieza de variables LaTeX en listas tipo "Donde:"
+    const cleanedReply = cleanVariablesLatex(aiReply);
+    const html = renderMarkdown(cleanedReply);
+
+    chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
+    scrollChatToBottom();
+
+    // Voz + halo animado solo para el texto limpio original
     speak(aiReply);
 
     // Re-renderizar MathJax para fórmulas
-    if (window.MathJax) MathJax.typesetPromise();
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      try { await MathJax.typesetPromise(); } catch {}
+    }
 
   } catch (error) {
+    clearTimeout(timeout);
     document.getElementById("thinking")?.remove();
-    chatBox.innerHTML += `<div><strong>MIRA:</strong> Error al conectar con la IA.</div>`;
+
+    let readable = "Error al conectar con la IA.";
+    if (error?.name === "AbortError") {
+      readable = "Se agotó el tiempo de espera. Intenta de nuevo.";
+    }
+    chatBox.innerHTML += `<div><strong>MIRA:</strong> ${readable}</div>`;
     setAvatarTalking(false);
     console.error(error);
+    scrollChatToBottom();
   }
 }
 
