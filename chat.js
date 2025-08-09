@@ -49,18 +49,13 @@ function hideThinking() {
 
 // ============ TTS (voz) ===================
 function plainTextForVoice(markdown) {
-  // Quitar negritas/cursivas
   let text = markdown
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1")
     .replace(/__([^_]+)__/g, "$1")
     .replace(/_([^_]+)_/g, "$1");
-
-  // Quitar LaTeX $$...$$ y $...$
   text = text.replace(/\$\$[\s\S]*?\$\$/g, " ");
   text = text.replace(/\$[^$]*\$/g, " ");
-
-  // Colapsar espacios
   return text.replace(/\s+/g, " ").trim();
 }
 
@@ -70,7 +65,6 @@ function speak(markdown) {
     if (!plain) return;
     const msg = new SpeechSynthesisUtterance(plain);
     msg.lang = "es-ES";
-    // Cancelar lo anterior para evitar superposición
     window.speechSynthesis.cancel();
     setAvatarTalking(true);
     msg.onend = () => setAvatarTalking(false);
@@ -83,7 +77,6 @@ function speak(markdown) {
 
 // ============ RENDER ======================
 function renderMarkdown(text) {
-  // marked viene por CDN en index.html
   return typeof marked !== "undefined" ? marked.parse(text) : text;
 }
 
@@ -107,7 +100,6 @@ async function sendMessage() {
   const userMessage = (input.value || "").trim();
   if (!userMessage) return;
 
-  // pinta mensaje usuario
   appendMessage("user", renderMarkdown(userMessage));
   input.value = "";
   showThinking();
@@ -117,7 +109,8 @@ async function sendMessage() {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json"
       },
       body: JSON.stringify({
         model: MODEL,
@@ -129,41 +122,45 @@ async function sendMessage() {
       })
     });
 
+    const raw = await response.text();
+    console.log("Groq raw response:", raw);
+
     hideThinking();
 
     if (!response.ok) {
-      throw new Error(`Groq HTTP ${response.status}`);
+      console.error("Groq error:", response.status, raw);
+      let msg = "Error al conectar con la IA.";
+      if (response.status === 401) msg += " (401: clave inválida o expirada)";
+      else if (response.status === 403) msg += " (403: CORS o acceso denegado)";
+      else if (response.status === 429) msg += " (429: límite de uso alcanzado)";
+      else msg += ` (HTTP ${response.status})`;
+      appendMessage("assistant", msg);
+      setAvatarTalking(false);
+      return;
     }
 
-    const data = await response.json();
+    const data = JSON.parse(raw);
     let aiReply = data?.choices?.[0]?.message?.content?.trim() || "";
 
-    // Fallback mínimo
     if (!aiReply) {
       aiReply = (await wikiFallback(userMessage)) || "Lo siento, no encontré una respuesta adecuada.";
     }
 
     const html = renderMarkdown(aiReply);
     appendMessage("assistant", html);
-
-    // Hablar
     speak(aiReply);
+    if (window.MathJax?.typesetPromise) MathJax.typesetPromise();
 
-    // Re-render de MathJax si existe
-    if (window.MathJax?.typesetPromise) {
-      MathJax.typesetPromise();
-    }
   } catch (err) {
     hideThinking();
-    appendMessage("assistant", "Error al conectar con la IA.");
+    appendMessage("assistant", "Error de red o CORS al conectar con la IA.");
     setAvatarTalking(false);
-    console.error(err);
+    console.error("Network/JS error:", err);
   }
 }
 
 // ============ INICIO ======================
 function initChat() {
-  // Enter para enviar
   const input = document.getElementById("user-input");
   input?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -172,10 +169,8 @@ function initChat() {
     }
   });
 
-  // Botón enviar (si existe)
   document.getElementById("send-btn")?.addEventListener("click", sendMessage);
 
-  // Saludo de bienvenida (evita duplicados)
   setTimeout(() => {
     const chatBox = document.getElementById("chat-box");
     const hasGreeting = chatBox && chatBox.textContent.trim().length > 0;
@@ -187,7 +182,6 @@ function initChat() {
     }
   }, 900);
 
-  // Avatar parado
   setAvatarTalking(false);
 }
 
