@@ -1,56 +1,76 @@
-const API_KEY = "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";
+// =============== CONFIG ===============
+const API_KEY = "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"; // ⚠️ Visible en el frontend
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
-// Halo animado
+// Prompt del sistema
+const SYSTEM_PROMPT = `
+Tú eres MIRA (Modular Intelligent Responsive Assistant), creada por Innova Space.
+Responde SIEMPRE en español, ordenada y clara, con buen uso de puntuación.
+Primero explica con palabras simples; luego, si corresponde, muestra la fórmula en LaTeX usando $...$ o $$...$$.
+No expliques el código LaTeX ni los signos de dólar. Usa listas y títulos cuando ayuden.
+Si el texto del usuario está incompleto o mal escrito, interprétalo y ofrece 1–2 alternativas breves.
+Si no estás segura, da una respuesta tentativa y pide una aclaración corta.
+`;
+
+// ============ AVATAR ANIMACIÓN ============
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
   if (!avatar) return;
-  avatar.classList.toggle("pulse", isTalking);
+  avatar.classList.toggle("pulse", !!isTalking);
   avatar.classList.toggle("still", !isTalking);
 }
 
-// Enter para enviar
-document.getElementById("user-input").addEventListener("keydown", function(event) {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    sendMessage();
-  }
-});
+// ============ UTILIDADES UI ===============
+function appendHTML(html) {
+  const chatBox = document.getElementById("chat-box");
+  chatBox.insertAdjacentHTML("beforeend", html);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
 
-// Indicador de carga
+function appendMessage(role, contentHTML) {
+  const who = role === "user" ? "Tú" : "MIRA";
+  appendHTML(`<div class="my-2"><strong>${who}:</strong> <span class="chat-markdown">${contentHTML}</span></div>`);
+}
+
 function showThinking() {
   const chatBox = document.getElementById("chat-box");
+  if (document.getElementById("thinking")) return;
   const thinking = document.createElement("div");
   thinking.id = "thinking";
-  thinking.className = "text-purple-300 italic";
+  thinking.className = "text-purple-300 italic my-1";
   thinking.innerHTML = `<span class="animate-pulse">MIRA está pensando<span class="animate-bounce">...</span></span>`;
   chatBox.appendChild(thinking);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Quitar negritas/cursivas y bloques LaTeX: voz limpia
-function plainTextForVoice(markdown) {
-  // Quitar todas las negritas/cursivas Markdown
-  let text = markdown.replace(/\*\*([^*]+)\*\*/g, '$1'); // **negrita**
-  text = text.replace(/\*([^*]+)\*/g, '$1');             // *cursiva*
-  text = text.replace(/__([^_]+)__/g, '$1');             // __negrita__
-  text = text.replace(/_([^_]+)_/g, '$1');               // _cursiva_
-  // Elimina todos los bloques $$...$$ (fórmulas centradas)
-  text = text.replace(/\$\$[\s\S]*?\$\$/g, ' ');
-  // Elimina todos los bloques $...$ (en línea)
-  text = text.replace(/\$[^$]*\$/g, ' ');
-  // Limpia exceso de espacios
-  text = text.replace(/\s+/g, ' ').trim();
-  return text;
+function hideThinking() {
+  document.getElementById("thinking")?.remove();
 }
 
-// Voz y halo solo en texto limpio
-function speak(text) {
+// ============ TTS (voz) ===================
+function plainTextForVoice(markdown) {
+  // Quitar negritas/cursivas
+  let text = markdown
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/_([^_]+)_/g, "$1");
+
+  // Quitar LaTeX $$...$$ y $...$
+  text = text.replace(/\$\$[\s\S]*?\$\$/g, " ");
+  text = text.replace(/\$[^$]*\$/g, " ");
+
+  // Colapsar espacios
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function speak(markdown) {
   try {
-    const plain = plainTextForVoice(text);
+    const plain = plainTextForVoice(markdown);
     if (!plain) return;
     const msg = new SpeechSynthesisUtterance(plain);
     msg.lang = "es-ES";
+    // Cancelar lo anterior para evitar superposición
     window.speechSynthesis.cancel();
     setAvatarTalking(true);
     msg.onend = () => setAvatarTalking(false);
@@ -61,57 +81,34 @@ function speak(text) {
   }
 }
 
-// Render Markdown y MathJax
+// ============ RENDER ======================
 function renderMarkdown(text) {
-  return marked.parse(text);
+  // marked viene por CDN en index.html
+  return typeof marked !== "undefined" ? marked.parse(text) : text;
 }
 
-// PROMPT mejorado: explicación previa, luego fórmula bonita
-const SYSTEM_PROMPT = `
-Tu eres MIRA, Modular Intelligent Responsive Assistant. En español: Asistente Modular, Inteligente y Reactivo. Creada por Innova Space y OpenAi.
-Responde SIEMPRE con estructura ordenada y clara, como ChatGPT.
+// ============ WIKIPEDIA FALLBACK ==========
+async function wikiFallback(query) {
+  try {
+    const res = await fetch(
+      `https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.extract || null;
+  } catch {
+    return null;
+  }
+}
 
-Si el usuario escribe palabras incompletas, con errores ortográficos, abreviaturas o frases poco claras, intenta corregir o interpretar automáticamente el mensaje para dar la mejor respuesta posible usando el contexto. Si no es completamente claro, ofrece alternativas breves (por ejemplo: "¿Quizás quisiste decir...?" o "¿Te refieres a...?") y pide aclaración solo si ninguna alternativa es adecuada.
-
-Cuando debas mostrar fórmulas, ecuaciones, funciones, expresiones algebraicas, matrices o símbolos matemáticos, primero escribe una frase explicando su significado con palabras simples y comprensibles para estudiantes (por ejemplo: "La velocidad media es igual al desplazamiento dividido por el intervalo de tiempo."). Después, incluye la ecuación en LaTeX usando los signos de dólar ($ para ecuaciones en línea, $$ para centradas), para que se vea como fórmula, pero NO expliques el código ni los signos de dólar.
-
-Ejemplo de formato ideal:
-"La velocidad media es igual al desplazamiento dividido por el intervalo de tiempo:
-$$
-v_m = \\frac{\\Delta x}{\\Delta t}
-$$
-Donde:
-- **v_m** es la velocidad media.
-- **Δx** es el desplazamiento total.
-- **Δt** es el intervalo de tiempo."
-
-NO uses LaTeX ni signos de dólar para variables, letras ni números sueltos en listas de definición: escribe la variable como texto normal o en negrita/cursiva usando Markdown.
-
-Utiliza frases completas, claras y bien puntuadas (usa puntos, comas y saltos de línea para pausas naturales y buena lectura en voz alta).
-
-No uses bloques de código ni asteriscos a menos que el usuario lo pida explícitamente.
-
-Utiliza listas, tablas y títulos para organizar la información. Resume si es posible.
-
-Si no sabes la respuesta, consulta Wikipedia.
-`;
-
-// Autosaludo inicial
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    speak("¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?");
-    setAvatarTalking(false);
-  }, 900);
-});
-
+// ============ ENVÍO MENSAJE ===============
 async function sendMessage() {
   const input = document.getElementById("user-input");
-  const chatBox = document.getElementById("chat-box");
-
-  const userMessage = input.value.trim();
+  const userMessage = (input.value || "").trim();
   if (!userMessage) return;
 
-  chatBox.innerHTML += `<div><strong>Tú:</strong> ${userMessage}</div>`;
+  // pinta mensaje usuario
+  appendMessage("user", renderMarkdown(userMessage));
   input.value = "";
   showThinking();
 
@@ -132,34 +129,66 @@ async function sendMessage() {
       })
     });
 
-    const data = await response.json();
-    document.getElementById("thinking")?.remove();
-    let aiReply = data.choices?.[0]?.message?.content || "";
+    hideThinking();
 
-    if (!aiReply || aiReply.toLowerCase().includes("no se pudo")) {
-      // Consulta Wikipedia solo si es necesario
-      const wiki = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(userMessage)}`);
-      const wikiData = await wiki.json();
-      aiReply = wikiData.extract || "Lo siento, no encontré una respuesta adecuada.";
+    if (!response.ok) {
+      throw new Error(`Groq HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    let aiReply = data?.choices?.[0]?.message?.content?.trim() || "";
+
+    // Fallback mínimo
+    if (!aiReply) {
+      aiReply = (await wikiFallback(userMessage)) || "Lo siento, no encontré una respuesta adecuada.";
     }
 
     const html = renderMarkdown(aiReply);
-    chatBox.innerHTML += `<div><strong>MIRA:</strong> <span class="chat-markdown">${html}</span></div>`;
-    chatBox.scrollTop = chatBox.scrollHeight;
+    appendMessage("assistant", html);
 
-    // Voz + halo animado SOLO para el texto limpio
+    // Hablar
     speak(aiReply);
 
-    // Re-renderizar MathJax para fórmulas
-    if (window.MathJax) MathJax.typesetPromise();
-
-  } catch (error) {
-    document.getElementById("thinking")?.remove();
-    chatBox.innerHTML += `<div><strong>MIRA:</strong> Error al conectar con la IA.</div>`;
+    // Re-render de MathJax si existe
+    if (window.MathJax?.typesetPromise) {
+      MathJax.typesetPromise();
+    }
+  } catch (err) {
+    hideThinking();
+    appendMessage("assistant", "Error al conectar con la IA.");
     setAvatarTalking(false);
-    console.error(error);
+    console.error(err);
   }
 }
 
-// Halo arranca quieto
-setAvatarTalking(false);
+// ============ INICIO ======================
+function initChat() {
+  // Enter para enviar
+  const input = document.getElementById("user-input");
+  input?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Botón enviar (si existe)
+  document.getElementById("send-btn")?.addEventListener("click", sendMessage);
+
+  // Saludo de bienvenida (evita duplicados)
+  setTimeout(() => {
+    const chatBox = document.getElementById("chat-box");
+    const hasGreeting = chatBox && chatBox.textContent.trim().length > 0;
+    if (!hasGreeting) {
+      const saludo = "¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?";
+      appendMessage("assistant", renderMarkdown(saludo));
+      speak(saludo);
+      if (window.MathJax?.typesetPromise) MathJax.typesetPromise();
+    }
+  }, 900);
+
+  // Avatar parado
+  setAvatarTalking(false);
+}
+
+window.addEventListener("DOMContentLoaded", initChat);
