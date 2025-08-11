@@ -13,38 +13,11 @@ Si no estás segura, da una respuesta tentativa y pide una aclaración corta.
 `;
 
 // ============ AVATAR ANIMACIÓN ============
-
-// (AÑADIDO) Referencia al <svg> interno del <object id="avatar-mira">
-let __innerAvatarSvg = null;
-
-// (AÑADIDO) Engancha el SVG interno cuando <object> cargue
-function hookAvatarInnerSvg() {
-  const obj = document.getElementById("avatar-mira");
-  if (!obj) return;
-  const connect = () => {
-    try {
-      __innerAvatarSvg = obj.contentDocument?.documentElement || null;
-    } catch {
-      __innerAvatarSvg = null;
-    }
-  };
-  // Por si ya estuviera cargado:
-  if (obj.contentDocument) connect();
-  // Y cuando termine de cargar:
-  obj.addEventListener("load", connect);
-}
-
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
   if (!avatar) return;
   avatar.classList.toggle("pulse", !!isTalking);
   avatar.classList.toggle("still", !isTalking);
-
-  // (AÑADIDO) Activa/desactiva animación dentro del SVG embebido
-  if (__innerAvatarSvg) {
-    __innerAvatarSvg.classList.toggle("talking", !!isTalking);
-    __innerAvatarSvg.style.setProperty("--level", isTalking ? "0.9" : "0.3");
-  }
 }
 
 // ============ UTILIDADES UI ===============
@@ -188,9 +161,6 @@ async function sendMessage() {
 
 // ============ INICIO ======================
 function initChat() {
-  // (AÑADIDO) Conectar con el SVG interno del avatar
-  hookAvatarInnerSvg();
-
   const input = document.getElementById("user-input");
   input?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
