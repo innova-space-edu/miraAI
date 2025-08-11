@@ -75,136 +75,6 @@ function speak(markdown) {
   }
 }
 
-/* ========= TTS sin botones (auto y desbloqueo por primer gesto) =========
-   - Intenta hablar de inmediato (Edge/Chrome escritorio suele permitirlo).
-   - Si está bloqueado (iOS/Android/Safari/Opera), guarda el texto y lo habla
-     automáticamente en el PRIMER gesto del usuario (tap/click/scroll/tecla).
-*/
-const TTS = (() => {
-  const state = {
-    supported: ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window),
-    ready: false,                 // true cuando logramos hablar o tras primer gesto
-    voices: [],
-    preferredLangs: ['es-CL','es-419','es-MX','es-AR','es-ES','es-US'],
-    keepAliveTimer: null,
-    pendingText: null,            // texto a leer apenas se pueda
-  };
-
-  function loadVoices() {
-    if (!state.supported) return;
-    const list = window.speechSynthesis.getVoices() || [];
-    if (!list.length) return;
-    state.voices = list;
-  }
-
-  function pickVoice() {
-    return state.voices.find(v => state.preferredLangs.includes(v.lang))
-        || state.voices.find(v => v.lang?.startsWith('es'))
-        || state.voices.find(v => v.default)
-        || state.voices[0]
-        || null;
-  }
-
-  function resumeWorkaround() {
-    try { window.speechSynthesis.resume(); } catch(e){}
-    if (state.keepAliveTimer) clearInterval(state.keepAliveTimer);
-    state.keepAliveTimer = setInterval(() => {
-      try { window.speechSynthesis.resume(); } catch(e){}
-      if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
-        clearInterval(state.keepAliveTimer);
-        state.keepAliveTimer = null;
-      }
-    }, 500);
-  }
-
-  function reallySpeak(markdown, opts = {}) {
-    const cleaned = plainTextForVoice(markdown);
-    if (!cleaned) return;
-    try { window.speechSynthesis.cancel(); } catch(e){}
-
-    const u = new SpeechSynthesisUtterance(cleaned);
-    const voice = pickVoice();
-    if (voice) u.voice = voice;
-    u.lang   = (voice && voice.lang) || opts.lang || 'es-ES';
-    u.rate   = (opts.rate  != null) ? opts.rate  : 1.0;
-    u.pitch  = (opts.pitch != null) ? opts.pitch : 1.0;
-    u.volume = (opts.volume!= null) ? opts.volume: 1.0;
-
-    setAvatarTalking(true);
-    u.onend = () => setAvatarTalking(false);
-    u.onerror = () => setAvatarTalking(false);
-
-    resumeWorkaround();
-    window.speechSynthesis.speak(u);
-  }
-
-  function tryImmediateSpeak(markdown) {
-    if (!state.supported) return false;
-    try {
-      reallySpeak(markdown);
-      state.ready = true;
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  function addFirstGestureUnlock() {
-    const unlock = () => {
-      try { window.speechSynthesis.cancel(); } catch(e){}
-      const u = new SpeechSynthesisUtterance('OK');
-      const v = pickVoice();
-      if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = 'es-ES'; }
-      window.speechSynthesis.speak(u);
-      state.ready = true;
-
-      if (state.pendingText) {
-        const text = state.pendingText;
-        state.pendingText = null;
-        setTimeout(() => reallySpeak(text), 80);
-      }
-      removeListeners();
-    };
-
-    function removeListeners() {
-      ['pointerdown','touchstart','click','keydown','wheel','scroll','focus'].forEach(ev => {
-        window.removeEventListener(ev, unlock, true);
-      });
-      document.removeEventListener('visibilitychange', unlock, true);
-    }
-
-    ['pointerdown','touchstart','click','keydown','wheel','scroll','focus'].forEach(ev => {
-      window.addEventListener(ev, unlock, { once: true, capture: true, passive: true });
-    });
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') unlock();
-    }, { once: true, capture: true, passive: true });
-  }
-
-  function init() {
-    if (!state.supported) return;
-    loadVoices();
-    if (typeof speechSynthesis !== 'undefined') {
-      speechSynthesis.onvoiceschanged = loadVoices;
-    }
-    addFirstGestureUnlock();
-  }
-
-  function queueSpeak(markdown, opts = {}) {
-    if (!state.supported) return;
-    if (state.ready) {
-      reallySpeak(markdown, opts);
-      return;
-    }
-    const ok = tryImmediateSpeak(markdown);
-    if (!ok) {
-      state.pendingText = markdown; // hablará en el primer gesto
-    }
-  }
-
-  return { init, queueSpeak };
-})();
-
 // ============ RENDER ======================
 function renderMarkdown(text) {
   return typeof marked !== "undefined" ? marked.parse(text) : text;
@@ -278,11 +148,7 @@ async function sendMessage() {
 
     const html = renderMarkdown(aiReply);
     appendMessage("assistant", html);
-
-    // ======= HABLA SIN BOTONES: intento inmediato + desbloqueo por primer gesto =======
-    TTS.queueSpeak(aiReply);
-    // speak(aiReply); // (fallback legacy, mantengo línea original comentada)
-
+    speak(aiReply);
     if (window.MathJax?.typesetPromise) MathJax.typesetPromise();
 
   } catch (err) {
@@ -295,9 +161,6 @@ async function sendMessage() {
 
 // ============ INICIO ======================
 function initChat() {
-  // Iniciar TTS sin botones
-  TTS.init();
-
   const input = document.getElementById("user-input");
   input?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -314,11 +177,7 @@ function initChat() {
     if (!hasGreeting) {
       const saludo = "¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?";
       appendMessage("assistant", renderMarkdown(saludo));
-
-      // Intento hablar de inmediato; si el navegador lo bloquea, se hablará en el primer gesto
-      TTS.queueSpeak(saludo);
-      // speak(saludo); // (fallback legacy, mantengo línea original comentada)
-
+      speak(saludo);
       if (window.MathJax?.typesetPromise) MathJax.typesetPromise();
     }
   }, 900);
