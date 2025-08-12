@@ -1,5 +1,4 @@
 // =============== CONFIG ===============
-
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 // Prompt del sistema
@@ -13,11 +12,38 @@ Si no estás segura, da una respuesta tentativa y pide una aclaración corta.
 `;
 
 // ============ AVATAR ANIMACIÓN ============
+
+// Referencia al <svg> interno del <object id="avatar-mira">
+let __innerAvatarSvg = null;
+
+// Engancha el SVG interno cuando <object> cargue
+function hookAvatarInnerSvg() {
+  const obj = document.getElementById("avatar-mira");
+  if (!obj) return;
+  const connect = () => {
+    try {
+      __innerAvatarSvg = obj.contentDocument?.documentElement || null;
+    } catch {
+      __innerAvatarSvg = null;
+    }
+  };
+  // Por si ya estuviera cargado:
+  if (obj.contentDocument) connect();
+  // Y cuando termine de cargar:
+  obj.addEventListener("load", connect);
+}
+
 function setAvatarTalking(isTalking) {
   const avatar = document.getElementById("avatar-mira");
   if (!avatar) return;
   avatar.classList.toggle("pulse", !!isTalking);
   avatar.classList.toggle("still", !isTalking);
+
+  // Activa/desactiva animación dentro del SVG embebido
+  if (__innerAvatarSvg) {
+    __innerAvatarSvg.classList.toggle("talking", !!isTalking);
+    __innerAvatarSvg.style.setProperty("--level", isTalking ? "0.9" : "0.3");
+  }
 }
 
 // ============ UTILIDADES UI ===============
@@ -105,10 +131,10 @@ async function sendMessage() {
   showThinking();
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    // 🔐 Usamos el proxy serverless en Netlify (la key vive en GROQ_API_KEY)
+    const response = await fetch("/api/chat", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
         "Accept": "application/json"
       },
@@ -123,12 +149,12 @@ async function sendMessage() {
     });
 
     const raw = await response.text();
-    console.log("Groq raw response:", raw);
+    console.log("Proxy /api/chat raw response:", raw);
 
     hideThinking();
 
     if (!response.ok) {
-      console.error("Groq error:", response.status, raw);
+      console.error("Proxy error:", response.status, raw);
       let msg = "Error al conectar con la IA.";
       if (response.status === 401) msg += " (401: clave inválida o expirada)";
       else if (response.status === 403) msg += " (403: CORS o acceso denegado)";
@@ -161,6 +187,9 @@ async function sendMessage() {
 
 // ============ INICIO ======================
 function initChat() {
+  // Conectar con el SVG interno del avatar
+  hookAvatarInnerSvg();
+
   const input = document.getElementById("user-input");
   input?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -171,16 +200,23 @@ function initChat() {
 
   document.getElementById("send-btn")?.addEventListener("click", sendMessage);
 
+  // Saludo inmediato (habla "al tiro")
   setTimeout(() => {
     const chatBox = document.getElementById("chat-box");
     const hasGreeting = chatBox && chatBox.textContent.trim().length > 0;
+
+    const saludo = "¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?";
+
+    // Si no hay saludo en el DOM, lo agregamos
     if (!hasGreeting) {
-      const saludo = "¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?";
       appendMessage("assistant", renderMarkdown(saludo));
-      speak(saludo);
-      if (window.MathJax?.typesetPromise) MathJax.typesetPromise();
     }
-  }, 900);
+
+    // Siempre hablar (aunque el saludo ya exista en el HTML)
+    speak(saludo);
+
+    if (window.MathJax?.typesetPromise) MathJax.typesetPromise();
+  }, 250); // pequeño delay para que el DOM esté listo
 
   setAvatarTalking(false);
 }
