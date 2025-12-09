@@ -1,368 +1,488 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MIRA · Asistente IA — Innova Space Education</title>
+    <meta charset="UTF-8" />
+    <title>Innova Space Education SPA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description"
+          content="Innova Space Education SPA - Soluciones educativas, inteligencia artificial, páginas web y gestión de proyectos institucionales con diseño futurista." />
 
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-P64ZZSCZ7Z"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-P64ZZSCZ7Z');
-  </script>
+    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet" />
 
-  <!-- Fuentes (mismas que la página CEO) -->
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
 
-  <!-- Tailwind + librerías -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-
-  <style>
-    /* Tipografía global estilo Innova Space */
-    body {
-      font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    h1, h2, h3, h4 {
-      font-family: "Orbitron", system-ui, sans-serif;
-      letter-spacing: 0.04em;
-    }
-
-    /* Fondo espacial suave (similar al ceo) */
-    .bg-space {
-      background: radial-gradient(circle at 0 0, rgba(56,189,248,0.13), transparent 55%),
-                  radial-gradient(circle at 100% 0, rgba(244,114,182,0.12), transparent 55%),
-                  radial-gradient(circle at 0 100%, rgba(129,140,248,0.12), transparent 55%),
-                  linear-gradient(to bottom right, #020617, #020617, #1e1b4b, #4c1d95);
-    }
-
-    /* Tarjeta “glass” para el chat */
-    .glass-card {
-      background: rgba(15,23,42,0.9);
-      border-radius: 1.5rem;
-      border: 1px solid rgba(168,85,247,0.7);
-      box-shadow: 0 24px 80px rgba(15,23,42,0.9);
-      backdrop-filter: blur(18px);
-    }
-
-    /* Avatar MIRA */
-    #avatar-mira {
-      display: inline-block;
-      vertical-align: middle;
-      width: 60px;
-      height: 60px;
-      margin-left: 15px;
-      margin-bottom: 8px;
-      transition: filter 0.3s, opacity 0.3s;
-      opacity: 1;
-      filter: grayscale(0.4) brightness(0.8);
-    }
-    #avatar-mira.pulse {
-      animation: halo-glow 1.2s infinite alternate;
-      filter: drop-shadow(0 0 16px #a855f7) brightness(1.25);
-      opacity: 1;
-    }
-    @keyframes halo-glow {
-      from { filter: drop-shadow(0 0 12px #4f46e5) brightness(1.18); }
-      to   { filter: drop-shadow(0 0 36px #38bdf8) brightness(1.45); }
-    }
-
-    @media (max-width: 600px) {
-      #avatar-mira { width: 40px; height: 40px; margin-left: 5px; }
-      #chat-box { font-size: 0.96rem;}
-      .max-w-3xl { max-width: 98vw;}
-    }
-
-    /* Markdown dentro del chat */
-    .chat-markdown table {
-      border-collapse: collapse; margin: 0.5em 0;
-      width: 100%;
-      background: #1f2937;
-      color: #f9fafb;
-      font-size: 0.97rem;
-    }
-    .chat-markdown th, .chat-markdown td {
-      border: 1px solid #7f5af0;
-      padding: 6px 10px;
-      text-align: left;
-    }
-    .chat-markdown th { background: #4f378b; }
-    mjx-container[jax="CHTML"] {
-      font-size: 1.25em;
-      background: transparent !important;
-      padding: 0.12em 0.2em;
-      margin: 0.35em 0;
-    }
-
-    .credits {
-      font-size: 1.1em;
-      color: #bbcbff;
-      text-align: center;
-      padding-bottom: 2em;
-      opacity: 0.85;
-      letter-spacing: 0.03em;
-    }
-    .credits strong {
-      color: #fff;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-    }
-
-    /* Ventana flotante “Quién es MIRA” */
-    #mira-info {
-      z-index: 50;
-      box-shadow: 0 6px 32px #23104a;
-      border-radius: 1.2rem;
-      background: #232146;
-      border: 2px solid #a855f7;
-      color: #fff;
-      max-width: 420px;
-      width: 92vw;
-      padding: 2.1rem 1.3rem 1.3rem 1.3rem;
-      text-align: center;
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%,-50%);
-      display: none;
-      transition: opacity .2s;
-    }
-    #mira-info h3 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-    #mira-info button {
-      margin-top: 1.5rem;
-      background: #a855f7;
-      color: #fff;
-      padding: 0.5rem 1.3rem;
-      border-radius: 0.6rem;
-      font-weight: 500;
-    }
-  </style>
+    <link rel="stylesheet" href="style.css" />
 </head>
+<body>
+    <!-- Canvas de fondo (nebulosa + estrellas) -->
+    <canvas id="starsCanvas"></canvas>
 
-<body class="bg-space text-white scroll-smooth min-h-screen flex flex-col">
-
-  <!-- NAVBAR estilo Innova -->
-  <header class="w-full z-20">
-    <div class="max-w-6xl mx-auto flex items-center justify-between px-5 py-4">
-      <div class="flex items-center gap-3">
-        <img src="logo.png" alt="Logo Innova Space" class="w-12 h-12 rounded-full border border-purple-400/70 shadow-lg">
-        <div>
-          <p class="text-xs uppercase tracking-[0.3em] text-indigo-200/80">Innova Space Education SPA</p>
-          <h1 class="text-lg sm:text-xl font-semibold text-white">
-            MIRA · Asistente Virtual
-          </h1>
+    <!-- Loader global -->
+    <div id="global-loader">
+        <div class="loader-content">
+            <div class="loader-galaxy"></div>
+            <p>Cargando universo educativo...</p>
         </div>
-      </div>
-      <nav class="hidden sm:flex items-center gap-3 text-sm font-medium">
-        <a href="https://innova-space-edu.cl" class="px-3 py-1.5 rounded-full border border-indigo-400/70 hover:bg-indigo-500/20 transition">
-          Volver a Innova
-        </a>
-        <a href="https://innova-space-edu.cl/#contacto" class="px-3 py-1.5 rounded-full bg-pink-500 hover:bg-pink-600 transition shadow-lg shadow-pink-500/40">
-          Contacto
-        </a>
-      </nav>
     </div>
-  </header>
 
-  <!-- HERO / TITULAR -->
-  <section class="pt-4 pb-6 text-center relative z-10 px-4">
-    <h2 class="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 text-transparent bg-clip-text">
-      Innova Space Education
-    </h2>
-    <p class="text-lg text-indigo-100 mt-3 max-w-2xl mx-auto">
-      Educación del futuro, con MIRA como asistente IA para apoyar a estudiantes y docentes.
-    </p>
-  </section>
+    <!-- HERO -->
+    <header id="hero">
+        <div class="hero-overlay"></div>
 
-  <!-- CONTENIDO PRINCIPAL: chat + info -->
-  <main class="flex-1 px-4 pb-12">
-    <section class="max-w-6xl mx-auto grid md:grid-cols-[1.2fr,1.1fr] gap-8 items-start">
-
-      <!-- Columna INFO / ÁREAS -->
-      <div class="space-y-8">
-        <div class="glass-card p-6 md:p-7">
-          <div class="flex items-center justify-center md:justify-start gap-3 mb-4">
-            <h2 class="text-3xl font-bold mb-0">Asistente IA - MIRA</h2>
-            <object
-              id="avatar-mira"
-              type="image/svg+xml"
-              data="avatar_mira.svg"
-              class="still"
-              tabindex="-1"
-              aria-hidden="true"></object>
-          </div>
-          <p class="text-indigo-100 text-sm md:text-base mb-4">
-            <strong>MIRA</strong> es la asistente virtual creada por <strong>Innova Space Education SPA</strong>.
-            Está diseñada para explicar contenidos, resolver dudas y acompañar procesos de aprendizaje en todas las áreas escolares.
-          </p>
-          <p class="text-sm md:text-base text-indigo-100/90">
-            Puedes preguntarle por fórmulas, problemas, resúmenes, explicaciones paso a paso y aplicaciones prácticas.
-            MIRA responde en español, con voz natural y estructura pensada para ser leída o escuchada fácilmente.
-          </p>
-          <div class="flex flex-wrap justify-center md:justify-start gap-2 mt-5 text-xs md:text-sm">
-            <span class="px-3 py-1 rounded-full bg-indigo-500/30 border border-indigo-300/60">Explicaciones claras</span>
-            <span class="px-3 py-1 rounded-full bg-purple-500/30 border border-purple-300/60">Soporte en todas las materias</span>
-            <span class="px-3 py-1 rounded-full bg-pink-500/30 border border-pink-300/60">Voz femenina natural</span>
-          </div>
-          <!-- Botón ¿Quién es MIRA? debajo -->
-          <div class="flex justify-center md:justify-start mt-6">
-            <button onclick="toggleMiraInfo()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-lg shadow-blue-500/40 text-sm font-semibold">
-              ¿Quién es MIRA?
+        <nav class="navbar">
+            <div class="nav-logo">
+                <picture>
+                    <!-- Logo principal: JPG (puedes cambiarlo por PNG o SVG si quieres) -->
+                    <img src="assets/img/logo.jpg" alt="Logo Innova Space Education">
+                </picture>
+                <span class="logo-text-animated">INNOVA SPACE EDUCATION SPA</span>
+            </div>
+            <button class="nav-toggle" id="navToggle">
+                <i class="ri-menu-3-line"></i>
             </button>
-          </div>
-        </div>
-
-        <!-- Áreas que responde MIRA (mismo contenido, estilo Innova) -->
-        <section class="glass-card p-6 md:p-7 bg-indigo-900/60">
-          <h3 class="text-2xl font-semibold mb-4 text-center md:text-left">Áreas que responde MIRA</h3>
-          <div class="text-center md:text-left">
-            <button onclick="toggleAreas()" class="bg-purple-700 px-5 py-2.5 rounded-lg font-semibold mb-4 text-white shadow-lg shadow-purple-500/40 text-sm">
-              Ver áreas que responde MIRA
-            </button>
-          </div>
-          <div id="areas-list" class="hidden mt-3">
-            <ul class="text-sm md:text-base space-y-1 text-indigo-100">
-              <li>📐 Matemáticas</li>
-              <li>🧲 Física</li>
-              <li>⚗️ Química</li>
-              <li>🧬 Biología</li>
-              <li>🌎 Historia</li>
-              <li>🗺️ Geografía</li>
-              <li>📚 Lenguaje</li>
-              <li>🗣️ Inglés</li>
-              <li>🎨 Artes Visuales</li>
-              <li>🎼 Música</li>
-              <li>🏃 Educación Física</li>
-              <li>💭 Filosofía</li>
-              <li>💻 Tecnología</li>
-              <li>🤝 Orientación</li>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#hero">Inicio</a></li>
+                <li><a href="#sobre">Sobre la empresa</a></li>
+                <li><a href="#servicios">Servicios</a></li>
+                <li><a href="#portafolio">Portafolio</a></li>
+                <li><a href="#redes">Redes sociales</a></li>
+                <li><a href="#contacto">Contacto</a></li>
             </ul>
-          </div>
-        </section>
+        </nav>
 
-        <!-- Quiénes somos + contacto breve (mantengo secciones) -->
-        <section class="glass-card p-6 md:p-7 bg-indigo-900/70">
-          <h3 class="text-2xl font-semibold mb-3 text-center md:text-left">¿Quiénes somos?</h3>
-          <p class="text-sm md:text-base text-indigo-100">
-            Innova Space Education SPA es una plataforma educativa que integra inteligencia artificial, desarrollo web
-            y diseño futurista para apoyar el aprendizaje en colegios e instituciones de Chile.
-          </p>
-        </section>
-
-        <section class="glass-card p-6 md:p-7 bg-indigo-900/70">
-          <h3 class="text-2xl font-semibold mb-3 text-center md:text-left">Contáctanos</h3>
-          <p class="text-sm md:text-base text-indigo-100 mb-1">
-            Correo: <span class="font-semibold">contacto@innova-space-edu.cl</span>
-          </p>
-          <p class="text-sm md:text-base text-indigo-100">
-            También puedes escribirnos desde el formulario en el sitio principal de Innova Space Education.
-          </p>
-        </section>
-      </div>
-
-      <!-- Columna CHAT -->
-      <section class="pt-2">
-        <div class="glass-card p-4 md:p-6">
-          <h2 class="text-2xl md:text-3xl font-semibold mb-4 text-center">
-            Habla con MIRA
-          </h2>
-          <p class="text-xs md:text-sm text-center text-indigo-100/90 mb-4 px-2">
-            Escribe tu duda o tema, por ejemplo: <em>“Explícame la ley de Ohm paso a paso”</em> o
-            <em>“Ayúdame con un problema de probabilidad”</em>.
-          </p>
-
-          <div class="bg-gray-900/80 border border-purple-500/60 rounded-xl p-4 shadow-inner relative">
-            <div id="chat-box"
-                 class="h-72 md:h-80 overflow-y-auto bg-gray-800/90 p-3 rounded-md mb-4 text-sm space-y-2 text-white chat-markdown"
-                 aria-live="polite">
-              <div>
-                <strong>MIRA:</strong> ¡Hola! Soy MIRA, tu asistente virtual. ¿En qué puedo ayudarte hoy?
-              </div>
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>INNOVA SPACE EDUCATION SPA</h1>
+                <p>
+                    Educación, tecnología e inteligencia artificial unidas en un
+                    ecosistema futurista para transformar colegios, instituciones y
+                    proyectos en todo Chile.
+                </p>
+                <div class="hero-buttons">
+                    <a href="#portafolio"
+                       class="btn-primary"
+                       data-mira-hint="Este botón le permite ver el portafolio de proyectos creados por Innova Space Education.">
+                        <i class="ri-rocket-2-fill"></i> Ver portafolio
+                    </a>
+                    <a href="#contacto"
+                       class="btn-secondary"
+                       data-mira-hint="Desde este botón puede agendar una reunión o dejar sus datos para un proyecto.">
+                        <i class="ri-calendar-event-fill"></i> Agenda una reunión
+                    </a>
+                </div>
+                <div class="hero-info">
+                    <span><i class="ri-map-pin-2-fill"></i> Vallenar – Antofagasta, Chile</span>
+                    <span><i class="ri-mail-fill"></i> contacto@innova-space-edu.cl</span>
+                </div>
+                <div class="hero-logos">
+                    <!-- Logo empresa -->
+                    <picture>
+                        <img src="assets/img/logo.jpg" alt="Logo Innova Space Education">
+                    </picture>
+                    <!-- Logo Mercado Público -->
+                    <picture>
+                        <img src="assets/img/logo-mercado-publico.png" alt="Logo Mercado Público">
+                    </picture>
+                </div>
             </div>
-            <div class="flex gap-2">
-              <input
-                aria-label="Escribe tu mensaje"
-                type="text" id="user-input"
-                placeholder="Escribe tu mensaje..."
-                class="flex-1 p-2 rounded-md bg-gray-700 text-white border border-gray-600 text-sm"
-                autocomplete="off"
-                onkeydown="if(event.key==='Enter'){sendMessage();return false;}"
-              >
-              <button
-                id="send-btn"
-                onclick="sendMessage()"
-                class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-md text-white font-bold text-sm"
-                tabindex="0">
-                Enviar
-              </button>
+
+            <!-- BLOQUE DE CARRUSEL DE VIDEOS (solo videos) -->
+            <div class="hero-media">
+                <div class="video-carousel"
+                     data-mira-hint="Este carrusel muestra videos de proyectos y experiencias desarrolladas por Innova Space Education.">
+                    <video id="carouselVideo"
+                           autoplay
+                           muted
+                           playsinline>
+                        <!-- La fuente del video se establece dinámicamente desde main.js -->
+                        Tu navegador no soporta la reproducción de video.
+                    </video>
+                </div>
             </div>
-          </div>
+            <!-- FIN CARRUSEL VIDEO -->
         </div>
-      </section>
-    </section>
-  </main>
+    </header>
 
-  <!-- Logo y créditos al final -->
-  <footer class="mt-6">
-    <div class="flex flex-col justify-center items-center py-8 gap-3">
-      <img src="logo.png" alt="Logo Innova Space" style="max-width:170px; width: 40vw; height:auto; opacity:0.95;">
-      <div class="credits">
-        Creado por <strong>Innova Space Edu SpA.</strong>.
-      </div>
+    <main>
+        <!-- SOBRE LA EMPRESA -->
+        <section id="sobre" class="section" data-mira-section="sobre">
+            <div class="section-header">
+                <h2>Sobre la empresa</h2>
+                <p>Quiénes somos y qué hacemos</p>
+            </div>
+            <div class="sobre-grid">
+                <div class="sobre-text">
+                    <h3>Innovación, educación y tecnología espacial</h3>
+                    <p>
+                        Innova Space Education SPA es una empresa chilena que integra
+                        educación, inteligencia artificial y desarrollo web para crear
+                        experiencias futuristas y funcionales para colegios,
+                        instituciones y proyectos tecnológicos.
+                    </p>
+                    <p>
+                        La empresa impulsa el desarrollo de tecnología aplicada,
+                        asistentes virtuales, plataformas interactivas y la innovación de
+                        espacios educativos para instituciones y organizaciones, uniendo
+                        IA, diseño web y gestión digital.
+                    </p>
+                    <div class="sobre-cards">
+                        <div class="sobre-card">
+                            <h4>Misión</h4>
+                            <p>
+                                Transformar la educación y la gestión institucional mediante
+                                tecnología accesible, visualmente atractiva y fácil de usar,
+                                conectando IA, desarrollo web y nuevas experiencias
+                                educativas.
+                            </p>
+                        </div>
+                        <div class="sobre-card">
+                            <h4>Visión</h4>
+                            <p>
+                                Ser un referente en soluciones educativas inteligentes y
+                                plataformas futuristas en Latinoamérica, con foco en Chile y
+                                en el desarrollo de proyectos innovadores.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="sobre-panel">
+                    <h4>Datos de la empresa</h4>
+                    <ul>
+                        <li><span>Nombre:</span> Innova Space Education SPA</li>
+                        <li><span>Ubicación:</span> Vallenar – Antofagasta, Chile</li>
+                        <li><span>Correo:</span> contacto@innova-space-edu.cl</li>
+                        <li>
+                            <span>Áreas:</span> Educación, IA, Desarrollo Web, Redes
+                            Sociales, innovación de espacios educativos e institucionales.
+                        </li>
+                        <li>
+                            <span>Enfoque:</span> proyectos a medida para colegios,
+                            instituciones, PYMEs y emprendimientos.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SERVICIOS -->
+        <section id="servicios" class="section section-dark" data-mira-section="servicios">
+            <div class="section-header">
+                <h2>Servicios</h2>
+                <p>Soluciones integrales con diseño futurista</p>
+            </div>
+            <div class="services-grid">
+                <article class="service-card"
+                         data-mira-hint="Aquí puede conocer el trabajo de Innova Space Education con inteligencia artificial aplicada a la educación y la gestión.">
+                    <i class="ri-robot-2-fill service-icon"></i>
+                    <h3>Inteligencia Artificial</h3>
+                    <p>
+                        Diseño de asistentes virtuales como MIRA, integración de modelos
+                        de IA para apoyo a clases, automatización de tareas y análisis de
+                        datos educativos o administrativos.
+                    </p>
+                </article>
+                <article class="service-card"
+                         data-mira-hint="Esta tarjeta describe el servicio de creación de páginas web futuristas e interactivas.">
+                    <i class="ri-macbook-fill service-icon"></i>
+                    <h3>Creación de páginas web</h3>
+                    <p>
+                        Desarrollo de sitios modernos, responsivos y futuristas para
+                        colegios, emprendimientos y empresas, integrados con bases de
+                        datos, paneles y APIs externas.
+                    </p>
+                </article>
+                <article class="service-card"
+                         data-mira-hint="Remodelación y diseño de espacios institucionales con enfoque temático, innovador y futurista.">
+                    <i class="ri-share-fill service-icon"></i>
+                    <h3>Gestión de Proyectos Institucionales</h3>
+                    <p>
+                        Diseño y transformación de áreas educativas en espacios modernos,
+                        funcionales y futuristas. Ambientes innovadores que fortalecen la
+                        identidad institucional y mejoran la experiencia de aprendizaje.
+                    </p>
+                </article>
+                <article class="service-card"
+                         data-mira-hint="En esta sección se indican los proyectos educativos interactivos y actividades para colegios.">
+                    <i class="ri-flask-fill service-icon"></i>
+                    <h3>Proyectos educativos interactivos</h3>
+                    <p>
+                        Herramientas y experiencias interactivas para Matemáticas,
+                        Ciencias y Tecnología. Soporte para pantallas interactivas, tecnologías AR-VR y ferias
+                        científicas.
+                    </p>
+                </article>
+            </div>
+        </section>
+
+        <!-- PORTAFOLIO -->
+        <section id="portafolio" class="section" data-mira-section="portafolio">
+            <div class="section-header">
+                <h2>Portafolio</h2>
+                <p>Proyectos y plataformas desarrolladas</p>
+            </div>
+            <div class="portfolio-grid">
+                <article class="portfolio-card">
+                    <h3>Innova Space Track</h3>
+                    <p>
+                        Sistema de inventario web para laboratorios, salas y recursos
+                        educativos. Incluye registro de préstamos, análisis de datos y
+                        panel de administración.
+                    </p>
+                    <a href="innova-space-track.html"
+                       class="portfolio-link"
+                       target="_blank"
+                       rel="noopener"
+                       data-mira-hint="Abrirá un demo del sistema de inventario desarrollado por Innova Space Education.">
+                        Ver demo
+                    </a>
+                </article>
+                <article class="portfolio-card">
+                    <h3>MIRA - Asistente Virtual</h3>
+                    <p>
+                        Asistente de inteligencia artificial con voz, memoria contextual y
+                        análisis de texto, diseñada para apoyar clases, proyectos y tareas
+                        administrativas.
+                    </p>
+                    <a href="https://mira.innova-space-edu.cl"
+                       class="portfolio-link"
+                       target="_blank"
+                       rel="noopener">
+                        Ver proyecto
+                    </a>
+                </article>
+                <article class="portfolio-card">
+                    <h3>Plataforma Innova Space Education</h3>
+                    <p>
+                        Sitio educativo con IA integrada, contenido interactivo y diseño
+                        espacial para estudiantes de distintos niveles.
+                    </p>
+                    <a href="#"
+                       class="portfolio-link"
+                       target="_blank"
+                       rel="noopener">
+                        Ver sitio
+                    </a>
+                </article>
+                <article class="portfolio-card">
+                    <h3>Otros proyectos personalizados</h3>
+                    <p>
+                        Páginas web para emprendimientos, módulos de inventario
+                        adicionales, paneles de control y sistemas adaptados a distintas
+                        instituciones.
+                    </p>
+                    <a href="#contacto" class="portfolio-link">
+                        Solicitar algo similar
+                    </a>
+                </article>
+            </div>
+        </section>
+
+        <!-- REDES SOCIALES -->
+        <section id="redes" class="section section-dark" data-mira-section="redes">
+            <div class="section-header">
+                <h2>Redes sociales</h2>
+                <p>Conecta con nuestro ecosistema digital</p>
+            </div>
+            <div class="social-grid">
+                <a href="https://www.instagram.com/innovaspacemc/"
+                   class="social-card"
+                   target="_blank"
+                   rel="noopener"
+                   data-mira-hint="Ir a Instagram para ver contenido, noticias y proyectos.">
+                    <i class="ri-instagram-line"></i>
+                    <span>Instagram</span>
+                </a>
+                <a href="#"
+                   class="social-card"
+                   target="_blank"
+                   rel="noopener">
+                    <i class="ri-facebook-circle-line"></i>
+                    <span>Facebook</span>
+                </a>
+                <a href="#"
+                   class="social-card"
+                   target="_blank"
+                   rel="noopener">
+                    <i class="ri-twitter-x-line"></i>
+                    <span>X (Twitter)</span>
+                </a>
+                <a href="#"
+                   class="social-card"
+                   target="_blank"
+                   rel="noopener">
+                    <i class="ri-youtube-line"></i>
+                    <span>YouTube</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- CONTACTO -->
+        <section id="contacto" class="section" data-mira-section="contacto">
+            <div class="section-header">
+                <h2>Contacto</h2>
+                <p>Conversemos su próximo proyecto</p>
+            </div>
+            <div class="contact-grid">
+                <form id="contactForm" class="contact-form" autocomplete="off">
+                    <div class="form-group">
+                        <label for="nombre">Nombre completo</label>
+                        <input type="text" id="nombre" name="nombre" placeholder="Tu nombre" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="correo">Correo electrónico</label>
+                        <input type="email" id="correo" name="correo" placeholder="tucorreo@ejemplo.com" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="institucion">Institución / Empresa</label>
+                        <input type="text" id="institucion" name="institucion"
+                               placeholder="Colegio, empresa, pyme, etc." />
+                    </div>
+                    <div class="form-group">
+                        <label for="ciudad">Ciudad</label>
+                        <input type="text" id="ciudad" name="ciudad" placeholder="Vallenar, Antofagasta, etc." />
+                    </div>
+                    <div class="form-group">
+                        <label for="mensaje">Mensaje</label>
+                        <textarea id="mensaje" name="mensaje" rows="4"
+                                  placeholder="Cuéntenos qué necesita" required></textarea>
+                    </div>
+                    <button type="submit"
+                            class="btn-primary btn-full"
+                            data-mira-hint="Este botón envía el formulario de contacto para coordinar una reunión.">
+                        <i class="ri-send-plane-fill"></i> Enviar mensaje
+                    </button>
+
+                    <p id="formStatus" class="form-note">
+                        Completa el formulario y te contactaremos por correo electrónico.
+                    </p>
+                </form>
+
+                <div class="contact-info">
+                    <h3>Datos de contacto</h3>
+                    <p><i class="ri-mail-fill"></i> contacto@innova-space-edu.cl</p>
+                    <p><i class="ri-map-pin-2-fill"></i> Vallenar – Antofagasta, Chile</p>
+                    <p><i class="ri-time-fill"></i> Atención a instituciones y proyectos por agenda.</p>
+                    <p>
+                        Podemos conectar sus sistemas actuales, crear nuevas plataformas
+                        o diseñar proyectos educativos con IA y desarrollo web a la
+                        medida.
+                    </p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>© <span id="year"></span> Innova Space Education SPA · Todos los derechos reservados.</p>
+    </footer>
+
+    <!-- CHATBOT MIRA flotante -->
+    <div id="mira-widget">
+        <!-- Botón flotante con SVG inline -->
+        <button id="mira-toggle" aria-label="Abrir asistente MIRA">
+            <!-- SVG del logo MIRA (sin fondo) -->
+            <svg width="110" height="110" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ff3c3c">
+                            <animate attributeName="stop-color"
+                                     values="#ff3c3c;#ffbe30;#35e835;#359bff;#8f38f7;#ff3c3c"
+                                     dur="6s"
+                                     repeatCount="indefinite" />
+                        </stop>
+                        <stop offset="50%" stop-color="#ffbe30">
+                            <animate attributeName="stop-color"
+                                     values="#ffbe30;#35e835;#359bff;#8f38f7;#ff3c3c;#ffbe30"
+                                     dur="6s"
+                                     repeatCount="indefinite" />
+                        </stop>
+                        <stop offset="100%" stop-color="#35e835">
+                            <animate attributeName="stop-color"
+                                     values="#35e835;#359bff;#8f38f7;#ff3c3c;#ffbe30;#35e835"
+                                     dur="6s"
+                                     repeatCount="indefinite" />
+                        </stop>
+                    </linearGradient>
+                    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+                        <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+                        <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                </defs>
+                <circle
+                    cx="55"
+                    cy="55"
+                    r="44"
+                    stroke="url(#rainbow)"
+                    stroke-width="8"
+                    fill="none"
+                    filter="url(#glow)">
+                    <animate attributeName="r" values="44;49;44" dur="1.4s" repeatCount="indefinite" />
+                    <animate attributeName="stroke-width" values="8;12;8" dur="1.4s" repeatCount="indefinite" />
+                    <animate attributeName="stroke-opacity" values="0.7;1;0.7" dur="1.4s" repeatCount="indefinite" />
+                </circle>
+            </svg>
+        </button>
+
+        <!-- Ventana del chat -->
+        <div id="mira-chat" class="mira-chat-closed">
+            <div class="mira-header">
+                <div class="mira-header-info">
+                    <!-- Mismo SVG, versión pequeña -->
+                    <svg width="32" height="32" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="rainbow-mini" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#ff3c3c" />
+                                <stop offset="50%" stop-color="#ffbe30" />
+                                <stop offset="100%" stop-color="#35e835" />
+                            </linearGradient>
+                        </defs>
+                        <circle
+                            cx="55"
+                            cy="55"
+                            r="44"
+                            stroke="url(#rainbow-mini)"
+                            stroke-width="8"
+                            fill="none" />
+                    </svg>
+                    <div>
+                        <h4>MIRA · Asistente IA</h4>
+                        <span>Futuristic AI · Voz femenina</span>
+                    </div>
+                </div>
+                <div class="mira-header-actions">
+                    <button id="mira-voice-toggle" title="Activar/Desactivar voz">
+                        <i class="ri-volume-up-fill"></i>
+                    </button>
+                    <button id="mira-close" title="Cerrar">
+                        <i class="ri-close-fill"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="mira-messages" id="miraMessages">
+                <!-- Mensaje inicial se agrega desde main.js -->
+            </div>
+            <div class="mira-loading" id="miraLoading">
+                <div class="loader-mini"></div>
+                <span>MIRA está pensando...</span>
+            </div>
+            <form id="miraForm" class="mira-input-area">
+                <input type="text"
+                       id="miraInput"
+                       placeholder="Escriba aquí... Ej: ¿Qué hace la empresa?"
+                       autocomplete="off" />
+                <button type="submit">
+                    <i class="ri-send-plane-2-fill"></i>
+                </button>
+            </form>
+        </div>
     </div>
-  </footer>
 
-  <!-- Ventana flotante de descripción de MIRA -->
-  <div id="mira-info">
-    <h3>¿Quién es MIRA?</h3>
-    <p class="text-base mb-4">
-      <strong>MIRA</strong> (Modular Intelligent Responsive Assistant), en español: Asistente Modular, Inteligente y Reactivo.<br>
-      Creada por <strong>Innova Space</strong> con tecnología <strong>OpenAI</strong>.<br>
-      Diseñada para acompañar, explicar y ayudar a estudiantes y docentes de forma interactiva y personalizada en todas las materias.<br>
-      Su misión es facilitar el aprendizaje, responder dudas, explicar fórmulas y conceptos, y guiarte en tu avance académico, con explicaciones claras y amigables.
-    </p>
-    <button onclick="toggleMiraInfo()">Cerrar</button>
-  </div>
-
-  <!-- Scripts auxiliares -->
-  <script>
-    function toggleMiraInfo() {
-      const info = document.getElementById("mira-info");
-      info.style.display = (info.style.display === "none" || info.style.display === "") ? "block" : "none";
-    }
-    function toggleAreas() {
-      const list = document.getElementById("areas-list");
-      list.classList.toggle("hidden");
-    }
-  </script>
-
-  <!-- Lógica del chat -->
-  <script src="chat.js"></script>
-
-  <!-- Integración LaTeX + Markdown para el chat -->
-  <script>
-    // Sobreescribe función para mostrar mensajes de la IA con Markdown + MathJax
-    function addAssistantMessage(text) {
-      const chatBox = document.getElementById('chat-box');
-      // Convierte Markdown a HTML (tablas, listas, negritas, etc.)
-      const html = `<div class="assistant-msg">${marked.parse(text)}</div>`;
-      chatBox.insertAdjacentHTML('beforeend', html);
-      // Desplaza el chat al final
-      chatBox.scrollTop = chatBox.scrollHeight;
-      // Procesa LaTeX con MathJax
-      if (window.MathJax) {
-        setTimeout(() => MathJax.typesetPromise(), 60);
-      }
-    }
-    // Cuando el flujo reciba la respuesta de MIRA, llama: addAssistantMessage(respuesta);
-  </script>
+    <script src="main.js" defer></script>
 </body>
 </html>
